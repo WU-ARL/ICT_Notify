@@ -1,0 +1,9 @@
+prefix=@PREFIX@
+libdir=@LIBDIR@
+includedir=@INCLUDEDIR@
+
+Name: NotificationLib
+Description: Notification library
+Version: @VERSION@
+Libs: -L${libdir} -lNotificationLib
+Cflags: -I${includedir}
