@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <ndn-cxx/ims/in-memory-storage-persistent.hpp>
 #include "common.hpp"
+#include "logicManager.hpp"
+
 namespace notificationLib {
 
 /**
@@ -25,29 +27,28 @@ public:
     }
   };
 
-  using NotificationCallback = function<void(const std::vector<Name>&)>;
-
-  api(const Name& notificationPrefix,
-         ndn::Face& face,
-         const NotificationCallback& notificationCB,
-         const Name& signingId = DEFAULT_NAME,
-         std::shared_ptr<Validator> validator = DEFAULT_VALIDATOR);
+  api(ndn::Face& face,
+      const Name& signingId = DEFAULT_NAME,
+      std::shared_ptr<Validator> validator = DEFAULT_VALIDATOR);
 
   ~api();
 
+  void
+  subscribe(const Name& eventPrefix,
+            const NotificationCallback& notificationCB);
+
+  void
+  registerEventPrefix(const Name& eventPrefix);
+
+  void
+  notify(const Name& prefix = EMPTY_NAME,
+         const NotificationData& eventList = EMPTY_EVENT_LIST,
+         const ndn::time::milliseconds& freshness = DEFAULT_EVENT_FRESHNESS);
+
+  // Define Callbacks
   using DataValidatedCallback = function<void(const Data&)>;
 
   using DataValidationErrorCallback = function<void(const Data&, const ValidationError& error)> ;
-
-  void
-  addNotificationAlert(const Name& prefix, const Name& signingId = DEFAULT_NAME);
-
-  void
-  removeNotificationAlert(const Name& prefix);
-
-  void
-  publishData(const Block& content, const ndn::time::milliseconds& freshness,
-              const Name& prefix = DEFAULT_PREFIX);
 
 private:
   void
@@ -68,23 +69,26 @@ private:
                          const ValidationError& error);
 
 public:
+  static const ndn::Name EMPTY_NAME;
   static const ndn::Name DEFAULT_NAME;
-  static const ndn::Name DEFAULT_PREFIX;
+  static const NotificationData EMPTY_EVENT_LIST;
   static const std::shared_ptr<Validator> DEFAULT_VALIDATOR;
+  static const time::milliseconds DEFAULT_EVENT_FRESHNESS;
+  static const time::milliseconds DEFAULT_EVENT_INTEREST_LIFETIME;
 
 private:
-  using RegisteredPrefixList = std::unordered_map<ndn::Name, const ndn::RegisteredPrefixId*>;
 
-  Name m_notificationPrefix;
-  NotificationCallback m_onNotification;
+  std::unordered_map<ndn::Name, const ndn::RegisteredPrefixId*> m_registeteredEventsList;
+  std::vector<ndn::Name> m_subscriptionList;
+  NotificationProtocol m_notificationProtocol;
+  //NotificationCallback m_onNotification;
   ndn::Face& m_face;
+  ndn::InMemoryStoragePersistent m_inMemoryStorage;
 
   Name m_signingId;
   ndn::KeyChain m_keyChain;
   std::shared_ptr<Validator> m_validator;
 
-  RegisteredPrefixList m_registeredPrefixList;
-  ndn::InMemoryStoragePersistent m_ims;
 };
 
 } // namespace notificationLib

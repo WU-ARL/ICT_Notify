@@ -1,0 +1,18 @@
+# -*- Mode: python; py-indent-offset: 4; indent-tabs-mode: nil; coding: utf-8; -*-
+
+from waflib import Utils, Context
+
+top = '..'
+
+TOOLS_DEPENDENCY = 'core-objects NDN_CXX BOOST LIBRESOLV NotificationLib'
+
+def build(bld):
+    bld(target='bin/sampleConsumer',
+       features='cxx cxxprogram',
+       source='consumer.cpp',
+       use=TOOLS_DEPENDENCY)
+
+    bld(target='bin/sampleProducer',
+       features='cxx cxxprogram',
+       source='producer.cpp',
+       use=TOOLS_DEPENDENCY)

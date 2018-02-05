@@ -58,6 +58,9 @@ using ndn::Interest;
 using ndn::Name;
 using ndn::security::v2::ValidationError;
 using ndn::security::v2::Validator;
+using ndn::EncodingImpl;
+using ndn::EncodingEstimator;
+using ndn::EncodingBuffer;
 
 namespace tlv {
 using namespace ndn::tlv;
