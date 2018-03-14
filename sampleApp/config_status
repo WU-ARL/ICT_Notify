@@ -1,0 +1,10 @@
+event
+{
+	prefix /Notification/statusApp/
+	filter
+	{
+		type name
+		name /user/status/
+		relation is-prefix-of
+	}
+}

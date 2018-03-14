@@ -18,8 +18,10 @@ NotificationProtocol::NotificationProtocol(ndn::Face& face,
   , m_signingId(defaultSigningId)
   , m_scheduler(m_face.getIoService())
   , m_interestTable(m_face.getIoService())
-  , m_randomGenerator(static_cast<unsigned int>(std::time(0)))
-  , m_reexpressionJitter(m_randomGenerator, boost::uniform_int<>(100,500))
+  //, m_randomGenerator(static_cast<unsigned int>(std::time(0)))
+  , m_randomGenerator(std::random_device{}())
+  , m_reexpressionJitter(100,500)
+  //, m_reexpressionJitter(m_randomGenerator, boost::uniform_int<>(100,500))
   , m_eventInterestLifetime(eventInterestLifetime)
   , m_eventReplyFreshness(eventReplyFreshness)
   , m_validator(validator)
@@ -46,20 +48,19 @@ NotificationProtocol::sendEventInterest(const Name& eventPrefix,
 
   Name interestName;
   interestName.append(eventPrefix);
-
+  //interestName.appendVersion();
   //m_outstandingInterestName = interestName;
 
   // scheduling the next interest so there is always a
   // long-lived interest packet in the PIT
   ndn::EventId eventId =
     m_scheduler.scheduleEvent(m_eventInterestLifetime / 2 +
-                              ndn::time::milliseconds(m_reexpressionJitter()),
+                              ndn::time::milliseconds(m_reexpressionJitter(m_randomGenerator)),
                               bind(&NotificationProtocol::sendEventInterest,
                                     this, eventPrefix, onUpdate));
 
-
-  //m_scheduler.cancelEvent(m_reexpressingInterestId);
-  //m_reexpressingInterestId = eventId;
+  m_scheduler.cancelEvent(m_scheduledInterestId);
+  m_scheduledInterestId = eventId;
 
   Interest interest(interestName);
   interest.setMustBeFresh(true);
@@ -68,7 +69,7 @@ NotificationProtocol::sendEventInterest(const Name& eventPrefix,
   //m_outstandingInterestId = m_face.expressInterest(interest,
   m_face.expressInterest(interest,
                          bind(&NotificationProtocol::onEventData, this, _1, _2, onUpdate),
-                         bind(&NotificationProtocol::onEventTimeout, this, _1), // Nack
+                         bind(&NotificationProtocol::onEventNack, this, _1), // Nack
                          bind(&NotificationProtocol::onEventTimeout, this, _1));
 
   _LOG_INFO("NotificationProtocol::sendEventInterest: Sent interest: " << interest.getName());
@@ -81,6 +82,18 @@ NotificationProtocol::onEventData(const Interest& interest,
 {
   _LOG_INFO("NotificationProtocol::onEventData for interest: " << interest);
   NotificationData reply;
+
+  // first, send another long-lived Interest
+  time::steady_clock::Duration after = time::milliseconds(m_reexpressionJitter(m_randomGenerator));
+  _LOG_DEBUG("Reschedule event interest after: " << after);
+  ndn::EventId eventId = m_scheduler.scheduleEvent(after,
+                                                   bind(&NotificationProtocol::sendEventInterest,
+                                                        this,
+                                                        interest.getName(),
+                                                        onUpdate));
+
+  m_scheduler.cancelEvent(m_scheduledInterestId);
+  m_scheduledInterestId = eventId;
 
   // validate data
 
@@ -98,43 +111,43 @@ NotificationProtocol::onEventData(const Interest& interest,
     _LOG_DEBUG("NotificationProtocol::onEventData: Received event: "
                << reply.m_notificationList.at(i));
   }
-  // send to application callback
+  // send to API callback
   onUpdate(reply.m_notificationList);
 
 }
-void
-NotificationProtocol::onEventDataValidationFailed(const Data& data)
-{
-  _LOG_DEBUG("NotificationProtocol::onEventDataValidationFailed");
-}
+// void
+// NotificationProtocol::onEventDataValidationFailed(const Data& data)
+// {
+//   _LOG_DEBUG("NotificationProtocol::onEventDataValidationFailed");
+// }
 
-void
-NotificationProtocol::onEventDataValidated(const Data& data, bool firstData)
-{
-  _LOG_DEBUG("NotificationProtocol::onEventDataValidated");
-  /*Name name = data.getName();
-  ConstBufferPtr digest = make_shared<ndn::Buffer>(name.get(-1).value(), name.get(-1).value_size());
+// void
+// NotificationProtocol::onEventDataValidated(const Data& data, bool firstData)
+// {
+//   _LOG_DEBUG("NotificationProtocol::onEventDataValidated");
+//   /*Name name = data.getName();
+//   ConstBufferPtr digest = make_shared<ndn::Buffer>(name.get(-1).value(), name.get(-1).value_size());
+//
+//   processSyncData(name, digest, data.getContent().blockFromValue(), firstData);*/
+//}
 
-  processSyncData(name, digest, data.getContent().blockFromValue(), firstData);*/
-}
-
-void
-NotificationProtocol::processEventData(const Name& name,
-                       const Block& evenyReplyBlock)
-{
-  _LOG_DEBUG("NotificationProtocol::processEventData");
-
-  try {
-    // Remove satisfied interest from PIT
-    m_interestTable.erase(name);
-
-    // construct data consisting of all event names
-  }
-  catch (const Error&) {
-    _LOG_DEBUG("Decoding failed");
-    return;
-  }
-}
+// void
+// NotificationProtocol::processEventData(const Name& name,
+//                        const Block& evenyReplyBlock)
+// {
+//   _LOG_DEBUG("NotificationProtocol::processEventData");
+//
+//   try {
+//     // Remove satisfied interest from PIT
+//     m_interestTable.erase(name);
+//
+//     // construct data consisting of all event names
+//   }
+//   catch (const Error&) {
+//     _LOG_DEBUG("Decoding failed");
+//     return;
+//   }
+// }
 
 void
 NotificationProtocol::onEventNack(const Interest& interest)
@@ -150,6 +163,7 @@ NotificationProtocol::onEventTimeout(const Interest& interest)
 void
 NotificationProtocol::registerEventPrefix(const Name& eventPrefix)
 {
+  _LOG_DEBUG("NotificationProtocol::registerEventPrefix");
   // add event and interest filter to registered events list
   m_registeteredEventsList[eventPrefix] = m_face.setInterestFilter(eventPrefix,
                            bind(&NotificationProtocol::onEventInterest,
@@ -174,7 +188,8 @@ NotificationProtocol::onEventInterest(const Name& prefix, const Interest& intere
 void
 NotificationProtocol::satisfyPendingEventInterests(const Name& notificationPrefix,
                                                    const NotificationData& notificationList,
-                                                   const ndn::time::milliseconds& freshness)
+                                                   const ndn::time::milliseconds& freshness,
+                                                   bool  scheduleRetry)
 {
   _LOG_DEBUG("NotificationProtocol::satisfyPendingEventInterests: "
              << "notificationPrefix is: " << notificationPrefix);
@@ -182,14 +197,26 @@ NotificationProtocol::satisfyPendingEventInterests(const Name& notificationPrefi
     bool doesExist = m_interestTable.has(notificationPrefix);
     if (doesExist)
     {
-      _LOG_DEBUG("NotificationProtocol::found notification prefix");
+      _LOG_INFO("NotificationProtocol::found notification prefix");
       sendEventData(notificationPrefix, notificationList, freshness);
       m_interestTable.erase(notificationPrefix);
     }
-      //if (request->isUnknown)
-    //    sendSyncData(updatedPrefix, request->interest.getName(), m_state);
-  //    else
+    // no pending Interest, buffer data for freshness period
+    else if(scheduleRetry)
+    {
+      time::steady_clock::Duration after = freshness;
+      // _LOG_ERROR("Reschedule data notification after: " << after);
+      // ndn::EventId eventId = m_scheduler.scheduleEvent(after,
+      //                                                  bind(&NotificationProtocol::satisfyPendingEventInterests,
+      //                                                       this,
+      //                                                       notificationPrefix,
+      //                                                       notificationList,
+      //                                                       freshness,
+      //                                                       false));
 
+      ////m_scheduler.cancelEvent(m_scheduledInterestId);
+      ////m_scheduledInterestId = eventId;
+    }
   }
   catch (const InterestTable::Error&) {
     // ok. not really an error

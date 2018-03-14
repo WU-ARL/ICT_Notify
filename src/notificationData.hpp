@@ -19,6 +19,8 @@ namespace notificationLib
   class NotificationData : noncopyable
   {
   public:
+    NotificationData(){};
+
     bool
     empty() const
     {

@@ -78,6 +78,8 @@ def build(bld):
         VERSION      = VERSION,
         )
 
+    bld.recurse("sampleApp")
+
 def version(ctx):
     if getattr(Context.g_module, 'VERSION_BASE', None):
         return

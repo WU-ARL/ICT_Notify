@@ -4,9 +4,18 @@
 #include "common.hpp"
 #include "interest-table.hpp"
 #include "notificationData.hpp"
-#include <boost/random.hpp>
+//#include <boost/random.hpp>
+#include <random>
 
+#include <boost/archive/iterators/dataflow_exception.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
+#include <boost/assert.hpp>
+#include <boost/iterator/transform_iterator.hpp>
+#include <boost/throw_exception.hpp>
 
+#include <memory>
+#include <random>
+#include <unordered_map>
 
 
 namespace notificationLib
@@ -44,7 +53,8 @@ namespace notificationLib
     void
     satisfyPendingEventInterests(const Name& notificationPrefix,
                                  const NotificationData& notificationList,
-                                 const ndn::time::milliseconds& freshness);
+                                 const ndn::time::milliseconds& freshness,
+                                 bool  scheduleRetry = true);
   public:
     ndn::Scheduler&
     getScheduler()
@@ -65,15 +75,15 @@ namespace notificationLib
     void
     onEventTimeout(const Interest& interest);
 
-    void
-    onEventDataValidationFailed(const Data& data);
+    // void
+    // onEventDataValidationFailed(const Data& data);
 
-    void
-    onEventDataValidated(const Data& data, bool firstData);
+    // void
+    // onEventDataValidated(const Data& data, bool firstData);
 
-    void
-    processEventData(const Name& name,
-                     const Block& EventReplyBlock);
+    // void
+    // processEventData(const Name& name,
+    //                  const Block& EventReplyBlock);
 
     void
     sendEventData(const Name& eventPrefix,
@@ -97,7 +107,7 @@ namespace notificationLib
     //std::vector <const ndn::PendingInterestId*> m_outstandingInterestList;
     // Event
     ndn::Scheduler m_scheduler;
-    //ndn::EventId m_reexpressingInterestId;
+    ndn::EventId m_scheduledInterestId;
 
     // Callback
     NotificationCallback m_onUpdate;
@@ -105,8 +115,10 @@ namespace notificationLib
     // Timer
     time::milliseconds m_eventInterestLifetime;
     time::milliseconds m_eventReplyFreshness;
-    boost::mt19937 m_randomGenerator;
-    boost::variate_generator<boost::mt19937&, boost::uniform_int<> > m_reexpressionJitter;
+    std::mt19937 m_randomGenerator;
+    std::uniform_int_distribution<> m_reexpressionJitter;
+    //boost::mt19937 m_randomGenerator;
+    //boost::variate_generator<boost::mt19937&, boost::uniform_int<> > m_reexpressionJitter;
 
     // Security
     Name m_signingId;

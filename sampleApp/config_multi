@@ -1,0 +1,28 @@
+event
+{
+	prefix /test/event/
+	filter
+	{
+	  type name
+		regex ^<test><event><([8-9]\\d|\\d{3,})>$
+	}
+}
+event
+{
+	prefix /test/event/
+	filter
+	{
+	  type name
+	  name /test/event/8
+	  relation equal
+	}
+}
+event
+{
+	prefix /test/event/
+	filter
+	{
+	  type name
+		regex ^<test><event><([3-4]\\d|\\d{3,})>$
+	}
+}

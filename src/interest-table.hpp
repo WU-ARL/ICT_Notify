@@ -6,7 +6,7 @@
 namespace notificationLib {
 
 /**
- * @brief A table to keep unsatisfied Sync Interest
+ * @brief A table to keep unsatisfied Event Interest
  */
 class InterestTable : noncopyable
 {

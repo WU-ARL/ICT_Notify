@@ -27,32 +27,23 @@ namespace ndn {
     {
 
     }
-
     void
     usage()
     {
       std::cout << "\n Usage:\n " << m_programName <<
       ""
-      " [-h] -n namespace -f filters_file [-d debug_mode]\n"
+      " [-h] -f filters_file [-d debug_mode]\n"
       " request notifications for a namespace and its filters.\n"
       "\n"
       " \t-h - print this message and exit\n"
-      " \t-n - register a namespace for notifications \n"
-      " \t-f - file containing filters for notifications\n"
+      " \t-f - file containing event filters\n"
       " \t-d - sets the debug mode, 1 - debug on, 0 - debug off (default)\n"
       "\n";
       exit(1);
     }
 
     void
-    setName(std::string name)
-    {
-      m_name = name;
-      if (DEBUG)
-        std::cout << "set name to " << m_name << std::endl;
-    }
-    void
-    setFilter(std::string file)
+    setFile(std::string file)
     {
       m_fileName = file;
       if (DEBUG)
@@ -76,16 +67,21 @@ namespace ndn {
       m_notificationHandler = std::make_shared<notificationLib::api>(m_face,
                                                                      notificationLib::api::DEFAULT_NAME,
                                                                      notificationLib::api::DEFAULT_VALIDATOR);
-      m_notificationHandler->subscribe(m_name,
-                                       std::bind(&NotificationConsumer::onNotificationUpdate, this, _1));
+      //m_notificationHandler->subscribe(m_name,
+        //                               std::bind(&NotificationConsumer::onNotificationUpdate, this, _1));
 
+      // subscribe using a configuration file
+      //std::string file("/Users/hila/Documents/ndn/notificationlibrary/sampleApp/config_regex");
+
+      m_notificationHandler->subscribe(m_fileName,
+                                       std::bind(&NotificationConsumer::onNotificationUpdate, this, _1));
+      sleep (5);
     }
 
     void onNotificationUpdate (const std::vector<Name>& nameList)
     {
-      std::cout << "GOT NOTIFICATION!!"<< std::endl;
       for (size_t i = 0; i < nameList.size(); i++) {
-          std::cout << "received notification: " << nameList[i] << std::endl;
+          std::cout << " application received notification: " << nameList[i] << std::endl;
         }
     }
   private:
@@ -108,16 +104,12 @@ main(int argc, char* argv[])
   bool nameSet = false;
   bool filterSet = false;
 
-  while ((option = getopt(argc, argv, "hn:f:d:")) != -1)
+  while ((option = getopt(argc, argv, "hf:d:")) != -1)
   {
     switch (option)
     {
-      case 'n':
-        consumer.setName((std::string)(optarg));
-        nameSet = true;
-        break;
       case 'f':
-        consumer.setFilter((std::string)(optarg));
+        consumer.setFile((std::string)(optarg));
         filterSet = true;
         break;
       case 'h':
@@ -135,7 +127,7 @@ main(int argc, char* argv[])
   argc -= optind;
   argv += optind;
 
-  if(!nameSet || !filterSet) {
+  if(!filterSet) {
     consumer.usage();
     return 1;
   }

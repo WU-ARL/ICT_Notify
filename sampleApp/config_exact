@@ -1,0 +1,10 @@
+event
+{
+	prefix /test/event/
+	filter
+	{
+	  type name
+	  name /test/event/8
+	  relation equal
+	}
+}

@@ -5,6 +5,7 @@
 #include <ndn-cxx/ims/in-memory-storage-persistent.hpp>
 #include "common.hpp"
 #include "logicManager.hpp"
+#include "event.hpp"
 
 namespace notificationLib {
 
@@ -17,15 +18,6 @@ namespace notificationLib {
 class api : noncopyable
 {
 public:
-  class Error : public std::runtime_error
-  {
-  public:
-    explicit
-    Error(const std::string& what)
-      : std::runtime_error(what)
-    {
-    }
-  };
 
   api(ndn::Face& face,
       const Name& signingId = DEFAULT_NAME,
@@ -33,8 +25,14 @@ public:
 
   ~api();
 
+  // subscribe to all events under the prefix - no filters
   void
   subscribe(const Name& eventPrefix,
+            const NotificationCallback& notificationCB);
+
+  // subscribe using an input file
+  void
+  subscribe(const std::string& filename,
             const NotificationCallback& notificationCB);
 
   void
@@ -51,6 +49,20 @@ public:
   using DataValidationErrorCallback = function<void(const Data&, const ValidationError& error)> ;
 
 private:
+
+  // struct findEvent {
+  //        findEvent(Name const& n) : name(n) { }
+  //        bool operator () ( Event const& el) const  { return el.getName() == name; }
+  //   private:
+  //        Name name;
+  //   };
+
+  void
+  onNotificationUpdate (const std::vector<Name>& nameList);
+
+  void
+  loadEventsConfigurationFile(std::istream& input, const std::string& filename);
+
   void
   onInterest(const Name& prefix, const Interest& interest);
 
@@ -73,15 +85,16 @@ public:
   static const ndn::Name DEFAULT_NAME;
   static const NotificationData EMPTY_EVENT_LIST;
   static const std::shared_ptr<Validator> DEFAULT_VALIDATOR;
-  static const time::milliseconds DEFAULT_EVENT_FRESHNESS;
   static const time::milliseconds DEFAULT_EVENT_INTEREST_LIFETIME;
+  static const time::milliseconds DEFAULT_EVENT_FRESHNESS;
 
 private:
 
   std::unordered_map<ndn::Name, const ndn::RegisteredPrefixId*> m_registeteredEventsList;
   std::vector<ndn::Name> m_subscriptionList;
+  std::vector<unique_ptr<Event>> m_eventList;
   NotificationProtocol m_notificationProtocol;
-  //NotificationCallback m_onNotification;
+  NotificationCallback m_onNotificationAppCB;
   ndn::Face& m_face;
   ndn::InMemoryStoragePersistent m_inMemoryStorage;
 

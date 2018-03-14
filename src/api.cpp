@@ -1,6 +1,12 @@
 #include "api.hpp"
 #include "logger.hpp"
 
+#include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/property_tree/info_parser.hpp>
+
+
 INIT_LOGGER(api);
 
 namespace notificationLib {
@@ -10,9 +16,7 @@ const ndn::Name api::DEFAULT_NAME;
 const NotificationData api::EMPTY_EVENT_LIST;
 const std::shared_ptr<Validator> api::DEFAULT_VALIDATOR;
 const time::milliseconds api::DEFAULT_EVENT_INTEREST_LIFETIME(10000);
-const time::milliseconds api::DEFAULT_EVENT_FRESHNESS(100);
-
-
+const time::milliseconds api::DEFAULT_EVENT_FRESHNESS(1);
 
 /*api::api(const Name& notificationPrefix,
        ndn::Face& face,
@@ -54,6 +58,7 @@ api::~api()
   }*/
 }
 
+//Deprecated
 void
 api::subscribe(const Name& eventPrefix, //Filter
                const NotificationCallback& notificationCB)
@@ -67,6 +72,78 @@ api::subscribe(const Name& eventPrefix, //Filter
   // schedule long-lived interests
   m_notificationProtocol.sendEventInterest(eventPrefix, notificationCB);
                                            //bind(&notificationCB, this, _1));
+}
+
+void
+api::subscribe(const std::string& filename,
+          const NotificationCallback& notificationCB)
+{
+  // get list of names and rulse from configuration file
+  std::ifstream inputFile;
+  inputFile.open(filename.c_str());
+  if (!inputFile.good() || !inputFile.is_open()) {
+    std::string msg = "Failed to read configuration file: ";
+    msg += filename;
+    BOOST_THROW_EXCEPTION(Error(msg));
+  }
+  //loadEventsConfigurationFile(inputFile, filename);
+  loadEventsConfigurationFile(inputFile, filename);
+  inputFile.close();
+
+  m_onNotificationAppCB = notificationCB;
+  // for each event
+  for (unsigned i=0; i< m_eventList.size(); i++)
+  {
+    // schedule long-lived interests for each event prefix
+    m_notificationProtocol.sendEventInterest((m_eventList.at(i))->getName(),
+                                            std::bind(&api::onNotificationUpdate, this, _1));
+    //m_notificationProtocol.sendEventInterest((m_eventList.at(i))->getName(), notificationCB);
+  }
+    // add notification prefix to subscription list (list of pairs with filters??)
+    //m_subscriptionList.push_back(eventPrefix);
+}
+void
+api::loadEventsConfigurationFile(std::istream& input, const std::string& filename)
+{
+  ConfigSection configSection;
+  try {
+    boost::property_tree::read_info(input, configSection);
+  }
+  catch (const boost::property_tree::info_parser_error& error) {
+    std::stringstream msg;
+    msg << "Failed to parse configuration file";
+    msg << " " << filename;
+    msg << " " << error.message() << " line " << error.line();
+    BOOST_THROW_EXCEPTION(Error(msg.str()));
+  }
+
+  // make sure the file is not empty
+  BOOST_ASSERT(!filename.empty());
+  if (configSection.begin() == configSection.end()) {
+    std::string msg = "Error processing configuration file";
+    msg += ": ";
+    msg += filename;
+    msg += " no data";
+    BOOST_THROW_EXCEPTION(Error(msg));
+  }
+
+  for (const auto& subSection : configSection) {
+    const std::string& sectionName = subSection.first;
+    const ConfigSection& section = subSection.second;
+
+    if (boost::iequals(sectionName, "event")) {
+      auto event = Event::create(section, filename);
+      m_eventList.push_back(std::move(event));
+    }
+    else {
+      std::string msg = "Error processing configuration file";
+      msg += " ";
+      msg += filename;
+      msg += " unrecognized section: " + sectionName;
+      BOOST_THROW_EXCEPTION(Error(msg));
+    }
+  }
+
 }
 
 
@@ -112,6 +189,31 @@ api::publishData(const Block& content, const ndn::time::milliseconds& freshness,
 
 }
 */
+void api::onNotificationUpdate (const std::vector<Name>& nameList)
+{
+  _LOG_DEBUG("api::onNotificationUpdate");
+
+  std::vector<Name> matchedNames;
+  for (size_t i = 0; i < nameList.size(); i++) {
+    Name name = nameList[i];
+    auto it = std::find_if(m_eventList.begin(), m_eventList.end(),
+                          [&name](const unique_ptr<Event>& event)
+                          {return (event->match(name));});
+    if (it != m_eventList.end()){
+      matchedNames.push_back(nameList[i]);
+    }
+
+    // for (size_t j = 0; j < m_eventList.size(); j++) {
+    //   if(m_eventList[j]->match(nameList[i])){
+    //      _LOG_DEBUG("api::onNotificationUpdate MATCH!!: " << nameList[i]);
+    //      matchedNames.push_back(nameList[i]);
+    //    }
+    // }
+  }
+    if(!matchedNames.empty())
+      m_onNotificationAppCB(matchedNames);
+}
+
 void
 api::onInterest(const Name& prefix, const Interest& interest)
 {

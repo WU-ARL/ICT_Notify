@@ -1,0 +1,9 @@
+event
+{
+	prefix /test/event/
+	filter
+	{
+	  type name
+		regex ^<test><event><([3-9]\\d|\\d{3,})>$
+	}
+}

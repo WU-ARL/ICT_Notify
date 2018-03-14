@@ -16,6 +16,7 @@
 #include <ndn-cxx/security/key-chain.hpp>
 #include <ndn-cxx/security/signing-helpers.hpp>
 #include <ndn-cxx/security/v2/validator.hpp>
+#include <ndn-cxx/security/v2/validator-config/filter.hpp>
 #include <ndn-cxx/security/validator-config.hpp>
 #include <ndn-cxx/util/scheduler.hpp>
 #include <ndn-cxx/util/time.hpp>
@@ -36,6 +37,7 @@ using std::size_t;
 
 using boost::noncopyable;
 using boost::scoped_ptr;
+typedef boost::property_tree::ptree ConfigSection;
 
 using std::bind;
 using std::const_pointer_cast;
@@ -49,6 +51,7 @@ using std::ref;
 using std::shared_ptr;
 using std::static_pointer_cast;
 using std::weak_ptr;
+using std::unique_ptr;
 
 using ndn::Block;
 using ndn::ConstBufferPtr;
@@ -58,9 +61,11 @@ using ndn::Interest;
 using ndn::Name;
 using ndn::security::v2::ValidationError;
 using ndn::security::v2::Validator;
+using ndn::security::v2::validator_config::Filter;
 using ndn::EncodingImpl;
 using ndn::EncodingEstimator;
 using ndn::EncodingBuffer;
+using ndn::make_unique;
 
 namespace tlv {
 using namespace ndn::tlv;
@@ -70,6 +75,17 @@ namespace name = ndn::name;
 namespace time = ndn::time;
 namespace security = ndn::security;
 namespace encoding = ndn::encoding;
+
+
+class Error : public std::runtime_error
+{
+public:
+  explicit
+  Error(const std::string& what)
+    : std::runtime_error(what)
+  {
+  }
+};
 
 } // namespace NotificationLib
 
