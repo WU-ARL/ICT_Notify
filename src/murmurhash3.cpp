@@ -22,7 +22,7 @@ uint32_t MurmurHash3(uint32_t nHashSeed, const std::vector<unsigned char>& vData
     // body
     const uint32_t * blocks = (const uint32_t *)(&vDataToHash[0] + nblocks*4);
 
-    for(size_t i = -nblocks; i; i++)
+    for(std::size_t i = -nblocks; i; i++)
     {
         uint32_t k1 = blocks[i];
 
