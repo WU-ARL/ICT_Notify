@@ -12,10 +12,11 @@
 #include <ndn-cxx/security/key-chain.hpp>
 #include <ndn-cxx/util/segment-fetcher.hpp>
 #include <ndn-cxx/security/validator-null.hpp>
-#include <notificationLib/api.hpp>
 #include <sstream>
 #include <iostream>
 
+//#include <notificationLib/api.hpp>
+#include <../src/api.hpp>
 // global variable to support debug
 int DEBUG = 0;
 
@@ -92,7 +93,7 @@ namespace ndn {
                                                                        notificationLib::api::DEFAULT_VALIDATOR);
 
         m_notificationHandler->init(m_fileName,
-          std::bind(&NotificationProducer::onNotificationUpdate, this, _1));
+                std::bind(&NotificationProducer::onNotificationUpdate, this, _1));
         //m_notificationHandler->registerNotificationPrefix(m_name);
 
     }

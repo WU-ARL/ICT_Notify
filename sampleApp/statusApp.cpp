@@ -12,9 +12,10 @@
 #include <ndn-cxx/security/key-chain.hpp>
 #include <ndn-cxx/util/segment-fetcher.hpp>
 #include <ndn-cxx/security/validator-null.hpp>
-#include <notificationLib/api.hpp>
 #include <thread>
 
+//#include <notificationLib/api.hpp>
+#include <../src/api.hpp>
 // global variable to support debug
 int DEBUG = 0;
 
