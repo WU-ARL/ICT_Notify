@@ -1,10 +1,16 @@
-event
+notification
 {
-	prefix /Notification/statusApp/
-	filter
+	name /test/service
+	maxMemorySize 100
+	isListener true
+	isProvider true
+	event
 	{
-		type name
-		name /user/status/
-		relation is-prefix-of
+		filter
+		{
+			type name
+			name /user/status/
+			relation is-prefix-of
+		}
 	}
 }

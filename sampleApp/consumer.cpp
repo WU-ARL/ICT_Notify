@@ -1,4 +1,4 @@
-/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
+  /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
  * Copyright (c) 2014, Washington University in St. Louis,
  *
@@ -11,6 +11,7 @@
 #include <unordered_set>
 #include <ndn-cxx/security/key-chain.hpp>
 #include <ndn-cxx/util/segment-fetcher.hpp>
+#include <ndn-cxx/util/time.hpp>
 #include <ndn-cxx/security/validator-null.hpp>
 #include <notificationLib/api.hpp>
 
@@ -73,9 +74,9 @@ namespace ndn {
       // subscribe using a configuration file
       //std::string file("/Users/hila/Documents/ndn/notificationlibrary/sampleApp/config_regex");
 
-      m_notificationHandler->subscribe(m_fileName,
+      m_notificationHandler->init(m_fileName,
                                        std::bind(&NotificationConsumer::onNotificationUpdate, this, _1));
-      sleep (5);
+      sleep (2);
     }
 
     void onNotificationUpdate (const std::vector<Name>& nameList)
@@ -103,6 +104,10 @@ main(int argc, char* argv[])
   int option;
   bool nameSet = false;
   bool filterSet = false;
+
+  // ndn::time::system_clock::TimePoint now = ndn::time::system_clock::now();
+  // std::cout << "sizeof TimePoint is: " << sizeof(ndn::time::system_clock::TimePoint) << std::endl;
+  // std::cout << "sizeof uint64_t is: " << sizeof(uint64_t) << std::endl;
 
   while ((option = getopt(argc, argv, "hf:d:")) != -1)
   {

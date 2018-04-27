@@ -34,22 +34,22 @@ namespace ndn {
     {
       std::cout << "\n Usage:\n " << m_programName <<
       ""
-      " [-h] -n namespace [-d debug_mode]\n"
+      " [-h] -f filters_file [-d debug_mode]\n"
       " Register and push event notifications.\n"
       "\n"
       " \t-h - print this message and exit\n"
-      " \t-n - register a namespace for notifications \n"
+      " \t-f - configuration file \n"
       " \t-d - sets the debug mode, 1 - debug on, 0 - debug off (default)\n"
       "\n";
       exit(1);
     }
 
     void
-    setEventName(std::string name)
+    setFile(std::string file)
     {
-      m_name = name;
+      m_fileName = file;
       if (DEBUG)
-        std::cout << "set name to " << m_name << std::endl;
+        std::cout << "set file name to " << m_fileName << std::endl;
     }
     void
     listen()
@@ -58,7 +58,7 @@ namespace ndn {
       while (true)
       {
         std::string fullInput, name;
-        notificationLib::NotificationData eventList;
+        std::vector<Name> eventList;
 
         m_face.processEvents(time::seconds(1));
         std::cout << "..: ";
@@ -69,12 +69,12 @@ namespace ndn {
 
         for(std::vector<std::string>::iterator it = parsedText.begin(); it != parsedText.end(); ++it)
         {
-          Name event(m_name);
+          Name event("/test/event/");
           event.append(*it);
-          eventList.add(event);
+          eventList.push_back(event);
         }
 
-        m_notificationHandler->notify(m_name, eventList);
+        m_notificationHandler->notify("/test/service", eventList);
         // sleep for a bit to avoid 100% cpu usge
         //usleep(1000);
       }
@@ -91,13 +91,21 @@ namespace ndn {
                                                                        notificationLib::api::DEFAULT_NAME,
                                                                        notificationLib::api::DEFAULT_VALIDATOR);
 
-        m_notificationHandler->registerEventPrefix(m_name);
+        m_notificationHandler->init(m_fileName,
+          std::bind(&NotificationProducer::onNotificationUpdate, this, _1));
+        //m_notificationHandler->registerNotificationPrefix(m_name);
 
+    }
+    void onNotificationUpdate (const std::vector<Name>& nameList)
+    {
+      for (size_t i = 0; i < nameList.size(); i++) {
+          std::cout << " application received notification: " << nameList[i] << std::endl;
+        }
     }
 
   private:
     std::string m_programName;
-    Name m_name;
+    //Name m_name;
     std::string m_fileName;
     std::shared_ptr<notificationLib::api> m_notificationHandler;
     Face m_face;
@@ -112,16 +120,15 @@ main(int argc, char* argv[])
 {
   ndn::NotificationProducer producer(argv[0]);
   int option;
-  bool nameSet = false;
-  bool filterSet = false;
+  bool fileSet = false;
 
-  while ((option = getopt(argc, argv, "hn:d:")) != -1)
+  while ((option = getopt(argc, argv, "hf:d:")) != -1)
   {
     switch (option)
     {
-      case 'n':
-        producer.setEventName((std::string)(optarg));
-        nameSet = true;
+      case 'f':
+        producer.setFile((std::string)(optarg));
+        fileSet = true;
         break;
       case 'h':
         producer.usage();
@@ -138,7 +145,7 @@ main(int argc, char* argv[])
   argc -= optind;
   argv += optind;
 
-  if(!nameSet) {
+  if(!fileSet) {
     producer.usage();
     return 1;
   }

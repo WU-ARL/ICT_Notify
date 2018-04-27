@@ -5,27 +5,21 @@
 #include <ndn-cxx/ims/in-memory-storage-persistent.hpp>
 #include <ndn-cxx/security/v2/validator-config/filter.hpp>
 #include "common.hpp"
-#include "logicManager.hpp"
 
 
 namespace notificationLib {
 
-/**
- * A simple interface for application.
- *
- * This interface allows an application to declare a prefix and a set of rulse
- * it wants to be notified on.
- */
 class Event : noncopyable
 {
 public:
-  Event(const Name& name);
+  Event();
+  //Event(const Name& name);
 
-  const Name&
-  getName() const
-  {
-    return m_name;
-  }
+  // const Name&
+  // getName() const
+  // {
+  //   return m_name;
+  // }
 
   void
   addFilter(unique_ptr<Filter> filter);
@@ -36,7 +30,7 @@ public:
   static unique_ptr<Event>
   create(const ConfigSection& configSection, const std::string& configFilename);
 
-  Name m_name;
+  //Name m_name;
   std::vector<unique_ptr<Filter>> m_filters;
 };
 } // namespace notificationLib

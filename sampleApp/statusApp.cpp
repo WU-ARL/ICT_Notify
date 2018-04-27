@@ -37,8 +37,7 @@ namespace ndn {
       " request notifications for a namespace and its filters.\n"
       "\n"
       " \t-h - print this message and exit\n"
-      " \t-f - file containing event filters\n"
-      " \t-p - name prefix to listen on\n"
+      " \t-f - configuration file \n"
       " \t-n - instance user name\n"
       " \t-d - sets the debug mode, 1 - debug on, 0 - debug off (default)\n"
       "\n";
@@ -74,10 +73,11 @@ namespace ndn {
                                                                      notificationLib::api::DEFAULT_NAME,
                                                                      notificationLib::api::DEFAULT_VALIDATOR);
 
-      m_notificationHandler->subscribe(m_fileName,
-                                       std::bind(&StatusApp::onNotificationUpdate, this, _1));
+      m_notificationHandler->init(m_fileName,
+                                  std::bind(&StatusApp::onNotificationUpdate, this, _1));
 
-      m_notificationHandler->registerEventPrefix(m_eventName);
+      // no need
+      //m_notificationHandler->registerNotificationPrefix(m_eventName);
       sleep (2);
     }
 
@@ -109,11 +109,11 @@ namespace ndn {
       eventOn.append(m_userName);
       eventOff.append(m_userName);
 
-      notificationLib::NotificationData eventListOn;
-      notificationLib::NotificationData eventListOff;
+      std::vector<Name> eventListOn;
+      std::vector<Name> eventListOff;
 
-      eventListOn.add(eventOn);
-      eventListOff.add(eventOff);
+      eventListOn.push_back(eventOn);
+      eventListOff.push_back(eventOff);
       while (1)
       {
         std::getline(std::cin, input);
@@ -122,7 +122,7 @@ namespace ndn {
           m_notificationHandler->notify(m_eventName, eventListOn);
           std::cout << "....: ";
           std::getline(std::cin, input);
-          while (input != "exit")
+          while (input != "off")
           {
             std::cout << "....: ";
             std::getline(std::cin, input);
@@ -164,20 +164,15 @@ main(int argc, char* argv[])
   ndn::StatusApp statusApp(argv[0], nullptr);
   int option;
   bool userNameSet = false;
-  bool eventNameSet = false;
   bool filterSet = false;
 
-  while ((option = getopt(argc, argv, "hf:p:n:d:")) != -1)
+  while ((option = getopt(argc, argv, "hf:n:d:")) != -1)
   {
     switch (option)
     {
       case 'f':
         statusApp.setFile((std::string)(optarg));
         filterSet = true;
-        break;
-      case 'p':
-        statusApp.setEventName((std::string)(optarg));
-        eventNameSet = true;
         break;
       case 'n':
         statusApp.setUserName((std::string)(optarg));
@@ -198,12 +193,15 @@ main(int argc, char* argv[])
   argc -= optind;
   argv += optind;
 
-  if(!filterSet || !eventNameSet || !userNameSet) {
+  if(!filterSet || !userNameSet) {
     statusApp.usage();
     return 1;
   }
   else
+  {
+    statusApp.setEventName("/test/service");
     statusApp.init();
+  }
 
   statusApp.start();
   //std::thread t1(readIO);

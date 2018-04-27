@@ -1,28 +1,32 @@
-event
+notification
 {
-	prefix /test/event/
-	filter
+	name /test/service
+	maxMemorySize 100
+	isListener true
+	isProvider true
+	event
 	{
-	  type name
-		regex ^<test><event><([8-9]\\d|\\d{3,})>$
-	}
-}
-event
-{
-	prefix /test/event/
-	filter
-	{
-	  type name
-	  name /test/event/8
-	  relation equal
-	}
-}
-event
-{
-	prefix /test/event/
-	filter
-	{
-	  type name
-		regex ^<test><event><([3-4]\\d|\\d{3,})>$
+		filter
+		{
+		  type name
+			regex ^<test><event><([8-9]\\d)>$
+		}
+		filter
+		{
+		  type name
+		  name /test/event/8
+		  relation equal
+		}
+		filter
+		{
+		  type name
+		  name /test/event/9
+		  relation equal
+		}
+		filter
+		{
+		  type name
+			regex ^<test><event><([3-4]\\d)>$
+		}
 	}
 }

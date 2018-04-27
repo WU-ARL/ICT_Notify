@@ -16,6 +16,9 @@ def options(opt):
     opt.add_option('--with-tests', action='store_true', default=False,
                    dest='with_tests', help='''Build unit tests''')
 
+    opt.add_option('--with-examples', action='store_true', default=False, dest='with_examples',
+                  help='''Build examples''')
+
 def configure(conf):
     conf.load(['compiler_c', 'compiler_cxx', 'gnu_dirs',
                'default-compiler-flags', 'boost', 'pch', 'coverage'])
@@ -41,6 +44,8 @@ def configure(conf):
     conf.env['STLIBPATH'] = ['.'] + conf.env['STLIBPATH']
 
     conf.write_config_header('config.hpp')
+
+    conf.env['WITH_EXAMPLES'] = conf.options.with_examples
 
 def build(bld):
     libnotification = bld(
@@ -77,8 +82,8 @@ def build(bld):
         INCLUDEDIR   = "%s/NotificationLib" % bld.env['INCLUDEDIR'],
         VERSION      = VERSION,
         )
-
-    bld.recurse("sampleApp")
+    if bld.env['WITH_EXAMPLES']:
+      bld.recurse("sampleApp")
 
 def version(ctx):
     if getattr(Context.g_module, 'VERSION_BASE', None):

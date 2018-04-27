@@ -4,6 +4,7 @@
 #include "common.hpp"
 #include "interest-table.hpp"
 #include "notificationData.hpp"
+#include "state.hpp"
 //#include <boost/random.hpp>
 #include <random>
 
@@ -20,7 +21,7 @@
 
 namespace notificationLib
 {
-  using NotificationCallback = function<void(const std::vector<Name>&)>;
+  //using NotificationCallback = function<void(const std::vector<Name>&)>;
 
   class NotificationProtocol : noncopyable
   {
@@ -36,8 +37,10 @@ namespace notificationLib
     };
 
     NotificationProtocol(ndn::Face& face,
+                         const Name& notificationName,
+                         size_t maxNotificationMemory,
                          //const Name& notificationPrefix,
-                         //const NotificationCallback& onUpdate,
+                         const NotificationAPICallback& onUpdate,
                          const Name& defaultSigningId,
                          std::shared_ptr<Validator> validator,
                          const time::milliseconds& eventInterestLifetime,
@@ -45,16 +48,14 @@ namespace notificationLib
     ~NotificationProtocol();
 
     void
-    sendEventInterest(const Name& eventPrefix, const NotificationCallback& onUpdate);
+    sendNotificationInterest();
 
     void
-    registerEventPrefix(const Name& eventPrefix);
+    registerNotificationFilter(const Name& notificationNameFilter);
 
     void
-    satisfyPendingEventInterests(const Name& notificationPrefix,
-                                 const NotificationData& notificationList,
-                                 const ndn::time::milliseconds& freshness,
-                                 bool  scheduleRetry = true);
+    satisfyPendingNotificationInterests(const std::vector<Name>& eventList,
+                                        const ndn::time::milliseconds& freshness);
   public:
     ndn::Scheduler&
     getScheduler()
@@ -64,16 +65,16 @@ namespace notificationLib
 
   private:
     void
-    onEventInterest(const Name& prefix, const Interest& interest);
+    onNotificationInterest(const Name& name, const Interest& interest);
 
     void
-    onEventData(const Interest& interest, const Data& data, const NotificationCallback& onUpdate);
+    onNotificationData(const Interest& interest, const Data& data);
 
     void
-    onEventNack(const Interest& interest);
+    onNotificationInterestNack(const Interest& interest);
 
     void
-    onEventTimeout(const Interest& interest);
+    onNotificationInterestTimeout(const Interest& interest);
 
     // void
     // onEventDataValidationFailed(const Data& data);
@@ -85,11 +86,28 @@ namespace notificationLib
     // processEventData(const Name& name,
     //                  const Block& EventReplyBlock);
 
-    void
-    sendEventData(const Name& eventPrefix,
-                  const NotificationData& notificationList,
-                  const ndn::time::milliseconds& freshness);
+    // void
+    // pushNotificationData(const Name& dataName,
+    //                      const std::vector<Name>& eventList,
+    //                      const ndn::time::milliseconds& freshness);
 
+    void
+    pushNotificationData(const Name& dataName,
+                          std::map<uint64_t,std::vector<Name>>& notificationList,
+                          const ndn::time::milliseconds& freshness);
+    // void
+    // pushNotificationData(const Name& dataName,
+    //                      std::set<std::pair<uint64_t,std::vector<uint8_t> > >& list,
+    //                      const ndn::time::milliseconds& freshness);
+
+    void
+    CreateNotificationData(const Name& dataName,
+                           const uint64_t timestampKey,
+                           const std::vector<Name>& notificationList,
+                           const ndn::time::milliseconds& freshness);
+
+     void
+     resetOutstandingInterest();
   public:
     /*
     static const ndn::Name DEFAULT_NAME;
@@ -100,21 +118,21 @@ namespace notificationLib
 
     // Communication
     ndn::Face& m_face;
-    Name m_eventPrefix;
-    std::unordered_map<ndn::Name, const ndn::RegisteredPrefixId*> m_registeteredEventsList;
+    Name m_notificationName;
+    std::unordered_map<ndn::Name, const ndn::RegisteredPrefixId*> m_registeteredNotificationList;
     InterestTable m_interestTable;
-
-    //std::vector <const ndn::PendingInterestId*> m_outstandingInterestList;
-    // Event
     ndn::Scheduler m_scheduler;
     ndn::EventId m_scheduledInterestId;
 
-    // Callback
-    NotificationCallback m_onUpdate;
+    // State
+    State m_state;
+    Name m_outstandingInterestName;
+    const ndn::PendingInterestId* m_outstandingInterestId;
+    NotificationAPICallback m_onUpdate;
 
     // Timer
-    time::milliseconds m_eventInterestLifetime;
-    time::milliseconds m_eventReplyFreshness;
+    time::milliseconds m_notificationInterestLifetime;
+    time::milliseconds m_notificationReplyFreshness;
     std::mt19937 m_randomGenerator;
     std::uniform_int_distribution<> m_reexpressionJitter;
     //boost::mt19937 m_randomGenerator;

@@ -13,39 +13,21 @@ namespace notificationLib {
 
 const ndn::Name api::EMPTY_NAME;
 const ndn::Name api::DEFAULT_NAME;
-const NotificationData api::EMPTY_EVENT_LIST;
+//const NotificationData api::EMPTY_EVENT_LIST;
 const std::shared_ptr<Validator> api::DEFAULT_VALIDATOR;
 const time::milliseconds api::DEFAULT_EVENT_INTEREST_LIFETIME(10000);
 const time::milliseconds api::DEFAULT_EVENT_FRESHNESS(1);
-
-/*api::api(const Name& notificationPrefix,
-       ndn::Face& face,
-       const NotificationCallback& notificationCB,
-       const Name& signingId,
-       std::shared_ptr<Validator> validator)
-  : m_notificationPrefix(notificationPrefix)
-  , m_face(face)
-  , m_onNotification(notificationCB)
-  , m_signingId(signingId)
-  , m_validator(validator)
-{
-  if (m_notificationPrefix != DEFAULT_PREFIX)
-    m_registeredPrefixList[m_notificationPrefix] =
-      m_face.setInterestFilter(m_notificationPrefix,
-                               bind(&api::onInterest, this, _1, _2),
-                               [] (const Name& prefix, const std::string& msg) {});
-}*/
 
 api::api(ndn::Face& face,
          const Name& signingId,
          std::shared_ptr<Validator> validator)
   : m_face(face)
-  , m_notificationProtocol(face,
-                           signingId,
-                           validator,
-                           api::DEFAULT_EVENT_INTEREST_LIFETIME,
-                           api::DEFAULT_EVENT_FRESHNESS)
-  , m_signingId(signingId)
+  // , m_notificationProtocol(face,
+  //                          signingId,
+  //                          validator,
+  //                          api::DEFAULT_EVENT_INTEREST_LIFETIME,
+  //                          api::DEFAULT_EVENT_FRESHNESS)
+   , m_signingId(signingId)
   , m_validator(validator)
 {
 }
@@ -58,25 +40,9 @@ api::~api()
   }*/
 }
 
-//Deprecated
 void
-api::subscribe(const Name& eventPrefix, //Filter
-               const NotificationCallback& notificationCB)
-{
-  if (eventPrefix.empty())
-    return;
-
-  // add notification prefix to subscription list (list of pairs with filters??)
-  m_subscriptionList.push_back(eventPrefix);
-
-  // schedule long-lived interests
-  m_notificationProtocol.sendEventInterest(eventPrefix, notificationCB);
-                                           //bind(&notificationCB, this, _1));
-}
-
-void
-api::subscribe(const std::string& filename,
-          const NotificationCallback& notificationCB)
+api::init(const std::string& filename,
+          const NotificationAppCallback& notificationCB)
 {
   // get list of names and rulse from configuration file
   std::ifstream inputFile;
@@ -86,24 +52,36 @@ api::subscribe(const std::string& filename,
     msg += filename;
     BOOST_THROW_EXCEPTION(Error(msg));
   }
-  //loadEventsConfigurationFile(inputFile, filename);
-  loadEventsConfigurationFile(inputFile, filename);
+  loadConfigurationFile(inputFile, filename);
   inputFile.close();
 
+  // TBD:: read notificationCB from file so every notification
+  // can have its own callback
   m_onNotificationAppCB = notificationCB;
   // for each event
-  for (unsigned i=0; i< m_eventList.size(); i++)
+  for (unsigned i=0; i< m_notificationList.size(); i++)
   {
-    // schedule long-lived interests for each event prefix
-    m_notificationProtocol.sendEventInterest((m_eventList.at(i))->getName(),
-                                            std::bind(&api::onNotificationUpdate, this, _1));
-    //m_notificationProtocol.sendEventInterest((m_eventList.at(i))->getName(), notificationCB);
+    // schedule long-lived interests for each notificatoin prefix
+    unique_ptr<Notification>& notification = m_notificationList[i];
+
+    if(notification->getIsListener())
+      (notification->m_notificationProtocol).sendNotificationInterest();
+      // (notification->m_notificationProtocol).sendNotificationInterest(
+      //                                       std::bind(&api::onNotificationUpdate,
+      //                                                 this,
+      //                                                 notification->getName(),
+      //                                                 _1));
+
+   if(notification->getIsProvider())
+      (notification->m_notificationProtocol).registerNotificationFilter(notification->getName());
+
+
+    // m_notificationProtocol.sendNotificationInterest((m_notificationList.at(i))->getName(),
+    //                                         std::bind(&api::onNotificationUpdate, this, m_notificationList[i] , _1));
   }
-    // add notification prefix to subscription list (list of pairs with filters??)
-    //m_subscriptionList.push_back(eventPrefix);
 }
 void
-api::loadEventsConfigurationFile(std::istream& input, const std::string& filename)
+api::loadConfigurationFile(std::istream& input, const std::string& filename)
 {
   ConfigSection configSection;
   try {
@@ -126,14 +104,17 @@ api::loadEventsConfigurationFile(std::istream& input, const std::string& filenam
     msg += " no data";
     BOOST_THROW_EXCEPTION(Error(msg));
   }
-
   for (const auto& subSection : configSection) {
     const std::string& sectionName = subSection.first;
     const ConfigSection& section = subSection.second;
 
-    if (boost::iequals(sectionName, "event")) {
-      auto event = Event::create(section, filename);
-      m_eventList.push_back(std::move(event));
+    if (boost::iequals(sectionName, "notification")) {
+      auto notification = Notification::create(section,
+                              filename,
+                              m_face,
+                              std::bind(&api::onNotificationUpdate, this, _1, _2));
+      m_notificationList.push_back(std::move(notification));
+
     }
     else {
       std::string msg = "Error processing configuration file";
@@ -143,128 +124,94 @@ api::loadEventsConfigurationFile(std::istream& input, const std::string& filenam
       BOOST_THROW_EXCEPTION(Error(msg));
     }
   }
-
 }
 
+// removed from API
+// register prefix for notifications (producer side)
+// void
+// api::registerNotificationPrefix(const Name& notificationName)
+// {
+  // fix
+  //m_notificationProtocol.registerNotificationFilter(notificationName);
 
-void
-api::registerEventPrefix(const Name& eventPrefix)
-{
-  m_notificationProtocol.registerEventPrefix(eventPrefix);
+
   /* Moved to logicManager
   // add event and interest filter to registered events list
   m_registeteredEventsList[eventPrefix] = m_face.setInterestFilter(eventPrefix,
                            bind(&api::onInterest, this, _1, _2),
                            [] (const Name& prefix, const std::string& msg) {});
    */
-}
+// }
 
-
+// notify a notification (producer side)
 void
-api::notify(const Name& prefix,
-       const NotificationData& notificationList,
+api::notify(const Name& notificationName,
+       const std::vector<Name>& eventList,
        const ndn::time::milliseconds& freshness)
 {
-  m_notificationProtocol.satisfyPendingEventInterests(prefix, notificationList, freshness);
+  // get notification pointer by name
+  int index = getNotificationIndex(notificationName);
+  if(index >= m_notificationList.size()) {
+      _LOG_ERROR("api::notify ERROR, no notification name: " << notificationName);
+      return;
+  }
+
+  unique_ptr<Notification>& notification = m_notificationList[index];
+
+  (notification->m_notificationProtocol).satisfyPendingNotificationInterests(eventList, freshness);
+
+  // fix
+  //m_notificationProtocol.satisfyPendingNotificationInterests(notificationName, eventList, freshness);
   //m_ims.insert(*data);
   //ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>();
 }
 
-/*
-void
-api::publishData(const Block& content, const ndn::time::milliseconds& freshness,
-                 const Name& prefix)
-{
-  shared_ptr<Data> data = make_shared<Data>();
-  data->setContent(content);
-  data->setFreshnessPeriod(freshness);
-  data->setName(prefix);
-
-  if (m_signingId.empty())
-    m_keyChain.sign(*data);
-  else
-    m_keyChain.sign(*data, security::signingByIdentity(m_signingId));
-
-  m_ims.insert(*data);*
-
-}
-*/
-void api::onNotificationUpdate (const std::vector<Name>& nameList)
+void api::onNotificationUpdate (const Name& notificationName,
+                                const std::map<uint64_t,std::vector<Name>>& notificationList)
 {
   _LOG_DEBUG("api::onNotificationUpdate");
 
   std::vector<Name> matchedNames;
-  for (size_t i = 0; i < nameList.size(); i++) {
-    Name name = nameList[i];
-    auto it = std::find_if(m_eventList.begin(), m_eventList.end(),
-                          [&name](const unique_ptr<Event>& event)
-                          {return (event->match(name));});
-    if (it != m_eventList.end()){
-      matchedNames.push_back(nameList[i]);
-    }
+  std::vector<Name> incomingEventList;
 
-    // for (size_t j = 0; j < m_eventList.size(); j++) {
-    //   if(m_eventList[j]->match(nameList[i])){
-    //      _LOG_DEBUG("api::onNotificationUpdate MATCH!!: " << nameList[i]);
-    //      matchedNames.push_back(nameList[i]);
-    //    }
-    // }
+  /// for now  - get all the names into ine vector regarsless of timestamp
+  incomingEventList.reserve(notificationList.size());
+  for(auto const& imap: notificationList)
+    incomingEventList.insert(incomingEventList.end(),
+                             imap.second.begin(),
+                             imap.second.end());
+
+  // Get notification by its name
+  int index = getNotificationIndex(notificationName);
+  if(index >= m_notificationList.size()) {
+      _LOG_ERROR("api::onNotificationUpdate ERROR, no notification name: " << notificationName);
+      return;
+  }
+  unique_ptr<Notification>& notification = m_notificationList[index];
+
+  //const std::vector<unique_ptr<Event>>& eventList = (m_notificationList[notificationIndex])->getEventList();
+  const std::vector<unique_ptr<Event>>& eventList = notification->getEventList();
+  for (size_t i = 0; i < incomingEventList.size(); i++) {
+    Name eventName = incomingEventList[i];
+    auto it = std::find_if(eventList.begin(), eventList.end(),
+                          [&eventName](const unique_ptr<Event>& event)
+                          {return (event->match(eventName));});
+    if (it != eventList.end()){
+      _LOG_INFO("api::onNotificationUpdate event: " << incomingEventList[i]);
+      matchedNames.push_back(incomingEventList[i]);
+    }
   }
     if(!matchedNames.empty())
       m_onNotificationAppCB(matchedNames);
 }
 
-void
-api::onInterest(const Name& prefix, const Interest& interest)
+int api::getNotificationIndex(const Name& notificationName)
 {
-  /*
-  shared_ptr<const Data>data = m_ims.find(interest);
-  if (static_cast<bool>(data)) {
-    m_face.put(*data);
-  }*/
-}
+  auto it = std::find_if(m_notificationList.begin(), m_notificationList.end(),
+                        [&notificationName](const unique_ptr<Notification>& notification)
+                        {return (notification->getName() == notificationName);});
 
-void
-api::onData(const Interest& interest, const Data& data,
-               const DataValidatedCallback& onValidated,
-               const DataValidationErrorCallback& onFailed)
-{
-  /*
-  _LOG_DEBUG("api::onData");
-
-  if (static_cast<bool>(m_validator))
-    m_validator->validate(data, onValidated, onFailed);
-  else
-    onValidated(data);
-    */
-}
-
-void
-api::onDataTimeout(const Interest& interest, int nRetries,
-                      const DataValidatedCallback& onValidated,
-                      const DataValidationErrorCallback& onFailed)
-{
-  /*
-  _LOG_DEBUG("api::onDataTimeout");
-  if (nRetries <= 0)
-    return;
-
-  Interest newNonceInterest(interest);
-  newNonceInterest.refreshNonce();
-
-  m_face.expressInterest(newNonceInterest,
-                         bind(&api::onData, this, _1, _2, onValidated, onFailed),
-                         bind(&api::onDataTimeout, this, _1, nRetries - 1,
-                              onValidated, onFailed), // Nack
-                         bind(&api::onDataTimeout, this, _1, nRetries - 1,
-                              onValidated, onFailed));
-                              */
-}
-
-void
-api::onDataValidationFailed(const Data& data,
-                               const ValidationError& error)
-{
+  return(std::distance(m_notificationList.begin(),it));
 }
 
 } // namespace notificationLib

@@ -11,10 +11,13 @@ INIT_LOGGER(event);
 
 namespace notificationLib {
 
-Event::Event(const Name& name)
-  : m_name(name)
+Event::Event()
 {
 }
+// Event::Event(const Name& name)
+//   : m_name(name)
+// {
+// }
 
 void
 Event::addFilter(unique_ptr<Filter> filter)
@@ -47,17 +50,9 @@ Event::create(const ConfigSection& configSection, const std::string& configFilen
 {
   auto propertyIt = configSection.begin();
 
-  // Get event.prefix
-  if (propertyIt == configSection.end() || !boost::iequals(propertyIt->first, "prefix")) {
-    BOOST_THROW_EXCEPTION(Error("Expecting <event.prefix>"));
-  }
+  auto event = make_unique<Event>();
 
-  Name prefix = propertyIt->second.data();
-  propertyIt++;
-
-  auto event = make_unique<Event>(prefix);
-
-  // Get event.filter
+  // Get event.filter (all filters)
   for (; propertyIt != configSection.end(); propertyIt++) {
     if (!boost::iequals(propertyIt->first, "filter")) {
       BOOST_THROW_EXCEPTION(Error("Expecting <event.filter> in Event"));

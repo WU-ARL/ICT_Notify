@@ -30,6 +30,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/tuple/tuple.hpp>
+#include <boost/chrono.hpp>
 
 namespace notificationLib {
 
@@ -66,6 +67,10 @@ using ndn::EncodingImpl;
 using ndn::EncodingEstimator;
 using ndn::EncodingBuffer;
 using ndn::make_unique;
+
+
+using NotificationAppCallback = function<void(const std::vector<Name>&)>;
+using NotificationAPICallback = function<void(const Name&, const std::map<uint64_t,std::vector<Name>>&)>;
 
 namespace tlv {
 using namespace ndn::tlv;
