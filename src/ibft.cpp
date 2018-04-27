@@ -79,16 +79,16 @@ IBFT::IBFT(const char* buffer, size_t bufferSize, size_t _valueSize)
   //m_hashTable.resize(numOfEntries);
   const HashTableEntry* entryPtr = reinterpret_cast<const HashTableEntry*>(buffer);
   //m_hashTable.insert(m_hashTable.begin(), entryPtr, entryPtr + numOfEntries);
-  // for(int i = 0; i < numOfEntries; ++i)
-  // {
-  //      std::cout << i << std::endl;
-  //      m_hashTable.push_back(*(entryPtr+i));
-  // }
-  std::cout << " numOfEntries" << numOfEntries << std::endl;
-  std::vector<HashTableEntry> tbl(entryPtr, entryPtr + numOfEntries );
-  std::cout << " init tbl" << numOfEntries << std::endl;
-  m_hashTable = tbl;
-  std::cout << " init m_hashTable" << numOfEntries << std::endl;
+  for(int i = 0; i < numOfEntries; ++i)
+  {
+       std::cout << i << std::endl;
+       m_hashTable.push_back(*(entryPtr+i));
+  }
+  // std::cout << " numOfEntries" << numOfEntries << std::endl;
+  // std::vector<HashTableEntry> tbl(entryPtr, entryPtr + numOfEntries );
+  // std::cout << " init tbl" << numOfEntries << std::endl;
+  // m_hashTable = tbl;
+  // std::cout << " init m_hashTable" << numOfEntries << std::endl;
 
 }
 IBFT::IBFT(const std::string& strIBF, size_t _valueSize)
