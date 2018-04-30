@@ -216,7 +216,7 @@ NotificationProtocol::satisfyPendingNotificationInterests(const std::vector<Name
   }
 }
 void
-NotificationProtocol::sendDiff(const Name& interestName,  const ndn::time::milliseconds freshness /*= ndn::time::milliseconds(0));*/)
+NotificationProtocol::sendDiff(const Name& interestName,  const ndn::time::milliseconds freshness /*= ndn::time::milliseconds(-1));*/)
 {
   std::set<std::pair<uint64_t,std::vector<uint8_t> > > inLocal, inRemote;
   _LOG_DEBUG("NotificationProtocol::satisfyPendingNotificationInterests:  About to get diff");
@@ -224,7 +224,7 @@ NotificationProtocol::sendDiff(const Name& interestName,  const ndn::time::milli
   // auto now_ns = boost::chrono::time_point_cast<boost::chrono::nanoseconds>(ndn::time::system_clock::now());
   // auto now_ns_long_type = (now_ns.time_since_epoch()).count();
 
-  ndn::time::milliseconds longestFreshness = freshness;
+//  ndn::time::milliseconds longestFreshness = freshness;
 
   // get new status name component
   ConstBufferPtr myStatus = m_state.getState();
@@ -261,7 +261,13 @@ NotificationProtocol::sendDiff(const Name& interestName,  const ndn::time::milli
 
     }
     if(!listToPush.empty())
-      pushNotificationData(fullDataName, listToPush, freshness);
+    {
+      if (freshness > ndn::time::milliseconds(0))
+        pushNotificationData(fullDataName, listToPush, freshness);
+      else
+        pushNotificationData(fullDataName, listToPush, m_notificationMemoryFreshness);
+    }
+
 
     // for now - ignore items we don't know in inRemote
     // TBD: don't think we should remove here, only when recieving data

@@ -98,7 +98,7 @@ namespace notificationLib
     //                      const ndn::time::milliseconds& freshness);
     void
     sendDiff(const Name& interestName,
-             const ndn::time::milliseconds freshness = ndn::time::milliseconds(0));
+             const ndn::time::milliseconds freshness = ndn::time::milliseconds(-1));
 
     void
     pushNotificationData(const Name& dataName,
