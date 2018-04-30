@@ -43,6 +43,7 @@ api::~api()
 void
 api::init(const std::string& filename,
           const NotificationAppCallback& notificationCB)
+          //const NotificationAppCallback& notificationCB)
 {
   // get list of names and rulse from configuration file
   std::ifstream inputFile;
@@ -170,6 +171,61 @@ void api::onNotificationUpdate (const Name& notificationName,
                                 const std::map<uint64_t,std::vector<Name>>& notificationList)
 {
   _LOG_DEBUG("api::onNotificationUpdate");
+  std::map<uint64_t,std::vector<Name>> matchedNotifications;
+
+  auto now_ns = boost::chrono::time_point_cast<boost::chrono::nanoseconds>(ndn::time::system_clock::now());
+  auto now_ns_long_type = (now_ns.time_since_epoch()).count();
+
+  // Get notification by its name
+  int index = getNotificationIndex(notificationName);
+  if(index >= m_notificationList.size()) {
+      _LOG_ERROR("api::onNotificationUpdate ERROR, no notification name: " << notificationName);
+      return;
+  }
+  unique_ptr<Notification>& notification = m_notificationList[index];
+  const std::vector<unique_ptr<Event>>& eventList = notification->getEventList();
+
+  for(auto const& iList: notificationList)
+  {
+    const uint64_t timestamp = iList.first;
+    const std::vector<Name>& eventsAtTimestamp = iList.second;
+    std::vector<Name> matchedNames;
+
+    for (size_t i = 0; i < eventsAtTimestamp.size(); i++) {
+      Name eventName = eventsAtTimestamp[i];
+      auto it = std::find_if(eventList.begin(), eventList.end(),
+                            [&eventName](const unique_ptr<Event>& event)
+                            {return (event->match(eventName));});
+      if (it != eventList.end())
+      {
+        _LOG_INFO("api::onNotificationUpdate matched event: " << eventName);
+
+        // check if event expired
+        // how long past
+        auto tPassed = now_ns_long_type - timestamp;
+
+        // if still relevant (convert ms to ns)
+        auto freshnessInNano =  (notification->m_notificationProtocol).getFreshnessInNanoSeconds();
+        if(tPassed <= freshnessInNano)
+        {
+          _LOG_INFO("api::onNotificationUpdate is still fresh: " << eventName);
+          matchedNames.push_back(eventName);
+        }
+        else
+          _LOG_INFO("api::onNotificationUpdate is NOT fresh: " << eventName);
+     }
+    }
+    if(!matchedNames.empty())
+    {
+      matchedNotifications[timestamp] = matchedNames;
+      m_onNotificationAppCB(matchedNotifications);
+
+    }
+  }
+
+// notify applications without timestamps
+#if 0
+  _LOG_DEBUG("api::onNotificationUpdate");
 
   std::vector<Name> matchedNames;
   std::vector<Name> incomingEventList;
@@ -203,6 +259,7 @@ void api::onNotificationUpdate (const Name& notificationName,
   }
     if(!matchedNames.empty())
       m_onNotificationAppCB(matchedNames);
+#endif
 }
 
 int api::getNotificationIndex(const Name& notificationName)

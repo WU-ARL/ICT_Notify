@@ -17,6 +17,7 @@ class Notification : noncopyable
 public:
   Notification(const Name& name,
                size_t maxNotificationMemory,
+               const time::milliseconds memoryFreshness,
                bool isListener,
                bool isProvider,
                ndn::Face& face,

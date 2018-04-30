@@ -1,7 +1,8 @@
 notification
 {
-	name /test/service
+	name /wustl/test/service
 	maxMemorySize 100
+	memoryFreshness 5
 	isListener true
 	isProvider true
 	event

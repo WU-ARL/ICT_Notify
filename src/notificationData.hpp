@@ -18,8 +18,14 @@ namespace notificationLib
       NotificationDataReply = 134,
       DataEntry = 135,
       DataList  = 136,
-      Type      = 137
-
+      Type      = 137,
+      IBFEntryCount = 138,
+      IBFEntryKeySum = 139,
+      IBFEntryKeyCheck = 140,
+      IBFEntryValueSum = 141,
+      IBFEntryIndex = 142,
+      IBFEntry = 143,
+      IBFTable = 143
     };
   }
   // namespace dataType
@@ -194,7 +200,6 @@ namespace notificationLib
           for (std::vector<Name>::const_reverse_iterator iName = events.rbegin();
                iName != events.rend(); ++iName)
           {
-            std::cerr << "DECODING NAME" << std::endl;
             entryLength += iName->wireEncode(encoder);
           }
           entryLength += encoder.prependVarNumber(entryLength);

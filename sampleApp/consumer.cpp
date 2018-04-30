@@ -76,11 +76,20 @@ namespace ndn {
       // subscribe using a configuration file
       //std::string file("/Users/hila/Documents/ndn/notificationlibrary/sampleApp/config_regex");
 
+      // m_notificationHandler->init(m_fileName,
+      //                             std::bind(&NotificationConsumer::onNotificationUpdate, this, _1));
+
       m_notificationHandler->init(m_fileName,
-                                       std::bind(&NotificationConsumer::onNotificationUpdate, this, _1));
+                                  std::bind(&NotificationConsumer::onNotificationUpdateWithTime, this, _1));
       sleep (2);
     }
 
+    void onNotificationUpdateWithTime (const std::map<uint64_t,std::vector<Name>>& notificationList)
+    {
+      for (size_t i = 0; i < notificationList.size(); i++) {
+          //std::cout << " application received notification: " << nameList[i] << std::endl;
+        }
+    }
     void onNotificationUpdate (const std::vector<Name>& nameList)
     {
       for (size_t i = 0; i < nameList.size(); i++) {

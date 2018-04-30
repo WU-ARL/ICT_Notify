@@ -75,13 +75,23 @@ namespace ndn {
                                                                      notificationLib::api::DEFAULT_VALIDATOR);
 
       m_notificationHandler->init(m_fileName,
-                                  std::bind(&StatusApp::onNotificationUpdate, this, _1));
+                                  std::bind(&StatusApp::onNotificationUpdateWithTime, this, _1));
 
       // no need
       //m_notificationHandler->registerNotificationPrefix(m_eventName);
       sleep (2);
     }
+    void onNotificationUpdateWithTime (const std::map<uint64_t,std::vector<Name>>& notificationList)
+    {
+      for(auto const& iList: notificationList)
+      {
+        std::cout << "NOTIFICATION AT: " << iList.first << std::endl;
+        for (size_t i = 0; i < iList.second.size(); i++) {
+          std::cout << "  " << iList.second[i] << std::endl;
+          }
+      }
 
+    }
     void onNotificationUpdate (const std::vector<Name>& nameList)
     {
       ndn::name::Component userName(m_userName);
@@ -95,7 +105,7 @@ namespace ndn {
         }
     }
     void
-    setEventName(std::string name)
+    setNotificationName(std::string name)
     {
       m_eventName = name;
       if (DEBUG)
@@ -200,7 +210,7 @@ main(int argc, char* argv[])
   }
   else
   {
-    statusApp.setEventName("/test/service");
+    statusApp.setNotificationName("/wustl/test/service");
     statusApp.init();
   }
 

@@ -1,5 +1,6 @@
 #include "notificationManager.hpp"
 #include "logger.hpp"
+#include <ndn-cxx/util/backports.hpp>
 
 INIT_LOGGER(logicManager);
 
@@ -8,6 +9,7 @@ namespace notificationLib {
 NotificationProtocol::NotificationProtocol(ndn::Face& face,
                                            const Name& notificationName,
                                            size_t maxNotificationMemory,
+                                           const time::milliseconds& notificationMemoryFreshness,
                                            const NotificationAPICallback& onUpdate,
                                            const Name& defaultSigningId,
                                            std::shared_ptr<Validator> validator,
@@ -16,6 +18,7 @@ NotificationProtocol::NotificationProtocol(ndn::Face& face,
   : m_face(face)
   , m_notificationName(notificationName)
   , m_state(maxNotificationMemory)
+  , m_notificationMemoryFreshness(notificationMemoryFreshness)
   , m_onUpdate(onUpdate)
   , m_interestTable(m_face.getIoService())
   , m_outstandingInterestId(0)
@@ -50,6 +53,9 @@ NotificationProtocol::sendNotificationInterest()
   _LOG_DEBUG("NotificationProtocol::sendNotificationInterest");
 
   Name interestName(m_notificationName);
+
+  // TBD: before getting state - remove old notificatoions
+
   ConstBufferPtr state  = m_state.getState();
   interestName.append(state->get<uint8_t>(), state->size());
   //interestName.appendVersion();
@@ -75,39 +81,37 @@ NotificationProtocol::sendNotificationInterest()
                                    bind(&NotificationProtocol::onNotificationInterestNack, this, _1), // Nack
                                    bind(&NotificationProtocol::onNotificationInterestTimeout, this, _1));
 
-  _LOG_INFO("NotificationProtocol::sendNotificationInterest: Sent interest: " << interest);
+  _LOG_DEBUG("NotificationProtocol::sendNotificationInterest: Sent interest: " << interest);
 }
 
 void
 NotificationProtocol::onNotificationData(const Interest& interest,
                                          const Data& data)
 {
-  _LOG_INFO("NotificationProtocol::onNotificationData for interest: " << interest);
+  _LOG_DEBUG("NotificationProtocol::onNotificationData for interest: " << interest);
   NotificationData notificationData;
 
   // TBD: validate data
 
   // Remove satisfied interest from PIT
   m_interestTable.erase(interest.getName());
-  std::cout << "full data name" << data.getName() << std::endl;
+
   ConstBufferPtr newStateComponentBuf = make_shared<ndn::Buffer>(data.getName().get(-1).value(),
                                                                  data.getName().get(-1).value_size());
   ConstBufferPtr oldStateComponentBuf = make_shared<ndn::Buffer>(data.getName().get(-2).value(),
                                                                  data.getName().get(-2).value_size());
-
   // for now, if our state is different then the old one - leave it
   ConstBufferPtr localStateName = m_state.getState();
   if(*oldStateComponentBuf != *localStateName)
   {
-    // probably not an error, but print out so we know when it happens
+    // Maybe not an error, but print out so we know when it happens
     _LOG_ERROR("NotificationProtocol::onNotificationData old state is different then ours");
     return;
   }
-  std::cout << " about to reconcile" << std::endl;
+
   // reconcile differences
-  //m_state.reconcile(newStateComponent, oldStateComponent, notificationData);
   m_state.reconcile(newStateComponentBuf, notificationData);
-  std::cout << " after  reconcile" << std::endl;
+
   //  send another interest only after update state with the new info
   if (m_outstandingInterestName == interest.getName()) {
     resetOutstandingInterest();
@@ -146,24 +150,35 @@ NotificationProtocol::registerNotificationFilter(const Name& notificationNameFil
   _LOG_DEBUG("NotificationProtocol::registerNotificationFilter");
 
   // add notification name filter to registered notification list
-  m_registeteredNotificationList[notificationNameFilter] = m_face.setInterestFilter(notificationNameFilter,
-                           bind(&NotificationProtocol::onNotificationInterest,
-                                this, _1, _2),
-                           [] (const Name& prefix, const std::string& msg) {});
+  m_registeteredNotificationList[notificationNameFilter] =
+          m_face.setInterestFilter(ndn::InterestFilter(notificationNameFilter).allowLoopback(false),
+                                   bind(&NotificationProtocol::onNotificationInterest,
+                                        this, _1, _2),
+                                   [] (const Name& prefix, const std::string& msg) {});
 }
 
 
 void
 NotificationProtocol::onNotificationInterest(const Name& name, const Interest& interest)
 {
-  _LOG_INFO("NotificationProtocol::onNotificationInterest insert interest: "
+  _LOG_DEBUG("NotificationProtocol::onNotificationInterest insert interest: "
              << interest);
 
-  // TBD: if data is ready then push it now.
-  // if not, save interest in interest table for future processing
+  ConstBufferPtr interestState = make_shared<ndn::Buffer>(interest.getName().get(-1).value(),
+                                                          interest.getName().get(-1).value_size());
+  ConstBufferPtr localState = m_state.getState();
 
-  // Insert full name Interest with notification name
-  m_interestTable.insert(interest, name);
+  if(*interestState == *localState)
+  {
+    //same state, save interest in interest table for future processing
+    // Insert full name Interest with notification name
+    m_interestTable.insert(interest, name);
+  }
+  else
+  {
+    // if data is ready then push it now.
+    sendDiff(Name(interest.getName().get(-1)));
+  }
 }
 
 void
@@ -183,22 +198,8 @@ NotificationProtocol::satisfyPendingNotificationInterests(const std::vector<Name
   // first, create new key timestamp for the pushed events
   uint64_t newTimestampKey = m_state.update(eventList);
 
-  _LOG_INFO("NotificationProtocol::satisfyPendingNotificationInterests:" << newTimestampKey);
+  _LOG_DEBUG("NotificationProtocol::satisfyPendingNotificationInterests:" << newTimestampKey);
 
-  // get new status name component
-  ConstBufferPtr newStatusName = m_state.getState();
-
-  std::cout << "Test constructor" << std::endl;
-  Name testName("/test/service/");
-  testName.append(newStatusName->get<uint8_t>(),newStatusName->size());
-  ConstBufferPtr fromNToB = make_shared<ndn::Buffer>(testName.get(-1).value(),
-                                                                 testName.get(-1).value_size());
- auto fromBToDec = bzip2::decompress(fromNToB->get<char>(),
-                                    fromNToB->size());
-
-  IBFT test(fromBToDec->get<char>(), fromBToDec->size());
-
-std::cout << "Test constructor end" << std::endl;
   try {
     // Go over all recorded requests and compute the set-difference
     // if can respond, reply with missing data
@@ -206,32 +207,7 @@ std::cout << "Test constructor end" << std::endl;
     while (it != m_interestTable.end()) {
       ConstUnsatisfiedInterestPtr request = *it;
       ++it;
-      std::set<std::pair<uint64_t,std::vector<uint8_t> > > inLocal, inRemote;
-      _LOG_INFO("NotificationProtocol::satisfyPendingNotificationInterests:  About to get diff");
-
-      Name fullDataName(request->interest.getName());
-      // get request state
-      ConstBufferPtr rmtStatus = make_shared<ndn::Buffer>(fullDataName.get(-1).value(),
-                                                          fullDataName.get(-1).value_size());
-
-      fullDataName.append(newStatusName->get<uint8_t>(),newStatusName->size());
-      std::cout << "full data name: " << fullDataName<< std::endl;
-      // compute the set-difference
-      if (m_state.getDiff(rmtStatus, inLocal, inRemote))
-      {
-        _LOG_INFO("NotificationProtocol::satisfyPendingNotificationInterests: list size is:" << inLocal.size());
-
-        std::map<uint64_t,std::vector<Name>> listToPush;
-        // send all new data (ignore removals for now. TBD)
-        for(auto const& lit: inLocal)
-        {
-          listToPush[lit.first] = m_state.getEventsAtTimestamp(lit.first);
-        }
-        pushNotificationData(fullDataName, listToPush, freshness);
-
-        // for now - ignore items we don't know
-        // TBD: don't think we should remove here, only when recieving data
-      }
+      sendDiff(request->interest.getName());
     }
     m_interestTable.clear();
   }
@@ -240,12 +216,63 @@ std::cout << "Test constructor end" << std::endl;
   }
 }
 void
+NotificationProtocol::sendDiff(const Name& interestName,  const ndn::time::milliseconds freshness /*= ndn::time::milliseconds(0));*/)
+{
+  std::set<std::pair<uint64_t,std::vector<uint8_t> > > inLocal, inRemote;
+  _LOG_DEBUG("NotificationProtocol::satisfyPendingNotificationInterests:  About to get diff");
+
+  // auto now_ns = boost::chrono::time_point_cast<boost::chrono::nanoseconds>(ndn::time::system_clock::now());
+  // auto now_ns_long_type = (now_ns.time_since_epoch()).count();
+
+  ndn::time::milliseconds longestFreshness = freshness;
+
+  // get new status name component
+  ConstBufferPtr myStatus = m_state.getState();
+
+  Name fullDataName(interestName);
+  // get request state
+  ConstBufferPtr rmtStatus = make_shared<ndn::Buffer>(interestName.get(-1).value(),
+                                                      interestName.get(-1).value_size());
+
+  fullDataName.append(myStatus->get<uint8_t>(),myStatus->size());
+
+  // compute the set-difference
+  if (m_state.getDiff(rmtStatus, inLocal, inRemote))
+  {
+    _LOG_DEBUG("NotificationProtocol::satisfyPendingNotificationInterests: list size is:" << inLocal.size());
+
+    std::map<uint64_t,std::vector<Name>> listToPush;
+    // send all new data (ignore removals for now. TBD)
+    for(auto const& lit: inLocal)
+    {
+      // how long past
+      // auto tPasses = now_ns_long_type - lit.first;
+      // ndn::time::milliseconds timestampInMs(lit.first);
+      //
+      // // if still relevant (convert ms to ns)
+      // if(tPasses <= (m_notificationMemoryFreshness.count()*1000000))
+      {
+        std::vector<Name>& eventList = m_state.getEventsAtTimestamp(lit.first);
+        // TBD: for now -  send empty lists to maintain the same state
+        // need to fix after handling removals
+        //if(!eventList.empty())
+          listToPush[lit.first] = eventList;
+      }
+
+    }
+    if(!listToPush.empty())
+      pushNotificationData(fullDataName, listToPush, freshness);
+
+    // for now - ignore items we don't know in inRemote
+    // TBD: don't think we should remove here, only when recieving data
+  }
+}
+void
 NotificationProtocol::pushNotificationData(const Name& dataName,
                                           std::map<uint64_t,std::vector<Name>>& notificationList,
                                           const ndn::time::milliseconds& freshness)
 {
   _LOG_DEBUG("NotificationProtocol::pushNotificationData named: " << dataName );
-  _LOG_DEBUG("NotificationProtocol::pushNotificationData: about to send" << m_state.dumpHistory(notificationList) );
 
   NotificationData eventListData(notificationList);
   eventListData.setType(NotificationData::dataType::EventsContainer);
@@ -269,7 +296,7 @@ NotificationProtocol::pushNotificationData(const Name& dataName,
 
   m_face.put(*data);
 
-  _LOG_INFO("NotificationProtocol::pushNotificationData: sent data for name" << dataName);
+  _LOG_DEBUG("NotificationProtocol::pushNotificationData: sent data for name" << dataName);
 
   Name interestName = dataName.getPrefix(-1);
   if (m_outstandingInterestName == interestName) {
@@ -366,7 +393,7 @@ NotificationProtocol::resetOutstandingInterest()
 
   //reschedule sending new notification interest
   time::milliseconds after(m_reexpressionJitter(m_randomGenerator));
-  _LOG_DEBUG("Satisfy our own interest");
+
   _LOG_DEBUG("Reschedule notification interest after " << after);
   ndn::EventId eventId = m_scheduler.scheduleEvent(after,
                                               bind(&NotificationProtocol::sendNotificationInterest,

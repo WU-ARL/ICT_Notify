@@ -25,28 +25,16 @@ public:
   void addTimestamp(uint64_t timestamp, const std::vector<Name>& eventList);
   uint64_t update(const std::vector<Name>& eventList);
 
-  //name::Component getState() const;
   ConstBufferPtr getState() const;
-
-  // bool getDiff(name::Component& rmtStateStr,
-  //             std::set<std::pair<uint64_t,std::vector<uint8_t> > >& inLocal,
-  //             std::set<std::pair<uint64_t,std::vector<uint8_t> > >& inRemote) const;
-
-  // bool getDiff(name::Component& local, name::Component& remote,
-  //              std::set<std::pair<uint64_t,std::vector<uint8_t> > >& inLocal,
-  //              std::set<std::pair<uint64_t,std::vector<uint8_t> > >& inRemote) const;
 
   bool getDiff(ConstBufferPtr rmtStateStr,
                std::set<std::pair<uint64_t,std::vector<uint8_t> > >& inLocal,
                std::set<std::pair<uint64_t,std::vector<uint8_t> > >& inRemote) const;
-  // static bool getDiff(ConstBufferPtr local, ConstBufferPtr remote,
-  //              std::set<std::pair<uint64_t,std::vector<uint8_t> > >& inLocal,
-  //              std::set<std::pair<uint64_t,std::vector<uint8_t> > >& inRemote);
 
-  //bool reconcile(name::Component& newState, NotificationData& data);
   bool reconcile(ConstBufferPtr newState, NotificationData& data);
-  //bool reconcile(name::Component& newState, name::Component& oldState, NotificationData& data);
+
   std::vector<Name>& getEventsAtTimestamp(uint64_t timestamp);
+
   // for debugging
   std::string dumpItems() const;
 

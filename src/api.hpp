@@ -29,6 +29,7 @@ public:
   void
   init(const std::string& filename,
        const NotificationAppCallback& notificationCB);
+       //const NotificationAppCallback& notificationCB);
 
   // void
   // registerNotificationPrefix(const Name& notificationPrefix);

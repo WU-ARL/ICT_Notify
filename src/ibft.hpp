@@ -5,9 +5,11 @@
 #ifndef IBFT_H
 #define IBFT_H
 
+#include "common.hpp"
 #include <inttypes.h>
 #include <set>
 #include <vector>
+#include <ndn-cxx/encoding/tlv-nfd.hpp>
 
 //
 // Invertible Bloom Lookup Table implementation
@@ -20,14 +22,17 @@
 // "Invertible Bloom Lookup Tables" by Goodrich and
 // Mitzenmacher
 //
+namespace notificationLib
+{
 
 class IBFT
 {
 public:
     IBFT(size_t _expectedNumEntries, size_t _ValueSize);
     IBFT(const IBFT& other);
-    IBFT(const std::string& strIBF, size_t _valueSize);
-    IBFT(const char* buffer, size_t bufferSize, size_t _valueSize);
+    // IBFT(const std::string& strIBF, size_t _valueSize);
+    // IBFT(const char* buffer, size_t bufferSize, size_t _valueSize);
+    IBFT(std::shared_ptr<ndn::Buffer>, size_t _expectedNumEntries, size_t _valueSize);
     virtual ~IBFT();
 
     void insert(uint64_t k, const std::vector<uint8_t> v);
@@ -60,6 +65,16 @@ public:
 
     std::string dumpItems() const;
 
+    // for encoding and decoding
+    //template<bool T>
+    template<encoding::Tag T> size_t
+    wireEncode(EncodingImpl<T>& encoder) const;
+
+    Block wireEncode() const;
+
+    void
+    wireDecode(const Block& wire);
+
 private:
     void _insert(int plusOrMinus, uint64_t k, const std::vector<uint8_t> v);
 
@@ -79,5 +94,5 @@ private:
     };
     std::vector<HashTableEntry> m_hashTable;
 };
-
+} // namespace NotificationLib
 #endif /* IBFT_H */

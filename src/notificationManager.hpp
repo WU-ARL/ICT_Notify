@@ -39,6 +39,7 @@ namespace notificationLib
     NotificationProtocol(ndn::Face& face,
                          const Name& notificationName,
                          size_t maxNotificationMemory,
+                         const time::milliseconds& notificationMemoryFreshness,
                          //const Name& notificationPrefix,
                          const NotificationAPICallback& onUpdate,
                          const Name& defaultSigningId,
@@ -61,6 +62,11 @@ namespace notificationLib
     getScheduler()
     {
       return m_scheduler;
+    }
+
+    uint64_t getFreshnessInNanoSeconds()
+    {
+      return m_notificationMemoryFreshness.count()*1000000;
     }
 
   private:
@@ -90,6 +96,9 @@ namespace notificationLib
     // pushNotificationData(const Name& dataName,
     //                      const std::vector<Name>& eventList,
     //                      const ndn::time::milliseconds& freshness);
+    void
+    sendDiff(const Name& interestName,
+             const ndn::time::milliseconds freshness = ndn::time::milliseconds(0));
 
     void
     pushNotificationData(const Name& dataName,
@@ -108,6 +117,7 @@ namespace notificationLib
 
      void
      resetOutstandingInterest();
+
   public:
     /*
     static const ndn::Name DEFAULT_NAME;
@@ -132,6 +142,7 @@ namespace notificationLib
 
     // Timer
     time::milliseconds m_notificationInterestLifetime;
+    time::milliseconds m_notificationMemoryFreshness;
     time::milliseconds m_notificationReplyFreshness;
     std::mt19937 m_randomGenerator;
     std::uniform_int_distribution<> m_reexpressionJitter;

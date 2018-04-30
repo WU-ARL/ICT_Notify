@@ -8,6 +8,7 @@ namespace notificationLib {
 
 Notification::Notification(const Name& name,
                           size_t maxNotificationMemory,
+                          time::milliseconds memoryFreshness,
                           bool isListener,
                           bool isProvider,
                           ndn::Face& face,
@@ -19,6 +20,7 @@ Notification::Notification(const Name& name,
   , m_notificationProtocol(face,
                            name,
                            maxNotificationMemory,
+                           memoryFreshness,
                            notificationCB,
                            api::DEFAULT_NAME,
                            api::DEFAULT_VALIDATOR,
@@ -56,6 +58,14 @@ Notification::create(const ConfigSection& configSection,
   size_t maxNotificationMemory = std::stoi(propertyIt->second.data());
   propertyIt++;
 
+  // Get notification.memoryFreshness
+  if (propertyIt == configSection.end() || !boost::iequals(propertyIt->first, "memoryFreshness")) {
+    BOOST_THROW_EXCEPTION(Error("Expecting <notification.memoryFreshness>"));
+  }
+  // converting seconds to ms.
+  size_t memoryFreshness = std::stoi(propertyIt->second.data()) *1000;
+  propertyIt++;
+
   // Get notification.isProvider
   bool isListener = false;
   if (propertyIt == configSection.end() || !boost::iequals(propertyIt->first, "isListener")) {
@@ -79,7 +89,8 @@ Notification::create(const ConfigSection& configSection,
   if (!isListener && !isProvider)
     BOOST_THROW_EXCEPTION(Error("isListener and isProvider are both false, expecting at least one to be true"));
 
-  auto notification = make_unique<Notification>(name, maxNotificationMemory, isListener, isProvider, face, notificationCB);
+  auto notification = make_unique<Notification>(name, maxNotificationMemory, time::milliseconds(memoryFreshness),
+                                                isListener, isProvider, face, notificationCB);
 
   if (isListener)
   {

@@ -9,6 +9,9 @@
 #include <utility>
 #include "ibft.hpp"
 #include "murmurhash3.hpp"
+#include "notificationData.hpp"
+
+namespace notificationLib {
 
 static const size_t N_HASH = 4;
 static const size_t N_HASHCHECK = 11;
@@ -22,7 +25,6 @@ std::vector<uint8_t> ToVec(T number)
   }
   return v;
 }
-
 
 bool IBFT::HashTableEntry::isPure() const
 {
@@ -69,182 +71,11 @@ IBFT::IBFT(const IBFT& other)
   m_hashTable = other.m_hashTable;
 }
 
-IBFT::IBFT(const char* buffer, size_t bufferSize, size_t _valueSize)
-  : valueSize(_valueSize)
+IBFT::IBFT(std::shared_ptr<ndn::Buffer> buf, size_t _expectedNumEntries, size_t _valueSize)
+  : IBFT(_expectedNumEntries, _valueSize)
 {
-  std::string fromBuf(buffer,bufferSize);
-  std::cout << " fromBuf" << fromBuf << std::endl;
-  std::cout << " bufferSize" << bufferSize << std::endl;
-  unsigned int numOfEntries = bufferSize / sizeof(HashTableEntry);
-  //m_hashTable.resize(numOfEntries);
-  const HashTableEntry* entryPtr = reinterpret_cast<const HashTableEntry*>(buffer);
-  //m_hashTable.insert(m_hashTable.begin(), entryPtr, entryPtr + numOfEntries);
-  for(int i = 0; i < numOfEntries; ++i)
-  {
-       std::cout << i << std::endl;
-       m_hashTable.push_back(*(entryPtr+i));
-  }
-  // std::cout << " numOfEntries" << numOfEntries << std::endl;
-  // std::vector<HashTableEntry> tbl(entryPtr, entryPtr + numOfEntries );
-  // std::cout << " init tbl" << numOfEntries << std::endl;
-  // m_hashTable = tbl;
-  // std::cout << " init m_hashTable" << numOfEntries << std::endl;
-
-}
-IBFT::IBFT(const std::string& strIBF, size_t _valueSize)
-  //: IBFT(_expectedNumEntries, _valueSize)
-  : valueSize(_valueSize)
-{
-  unsigned int numOfEntries = strIBF.size() / sizeof(HashTableEntry);
-  std::cout << " numOfEntries" << numOfEntries << std::endl;
-  const HashTableEntry* entryPtr = reinterpret_cast<const HashTableEntry*>(strIBF.c_str());
-  std::cout << " entryPtr" << entryPtr<< std::endl;
-
-  m_hashTable.insert(m_hashTable.begin(), entryPtr, entryPtr + numOfEntries);
-
-  // for(int i = 0; i < numOfEntries; ++i)
-  // {
-  //      std::cout << i << std::endl;
-  //      m_hashTable.push_back(*(entryPtr+i));
-  // }
-std::cout << " IBF end" << std::endl;
-  // every entry (4+8+4+valueSize) * # of entries
-  // size_t entrySize = sizeof(HashTableEntry::count)
-  //                    + sizeof(HashTableEntry::keySum)
-  //                    + sizeof(HashTableEntry::keyCheck)
-  //                    + valueSize;
-  //
-  // int numOfEntries = strIBF.size()/entrySize;
-  // const uint8_t* actual = reinterpret_cast<const uint8_t*>(strIBF.c_str());
-
-  // m_hashTable.resize(m_hashTable.size() + numOfEntries);
-  //std::memcpy(m_hashTable.data(),actual, strIBF.size());
-
-
-  //m_hashTable.insert(m_hashTable.end(), &strIBF[0], strIBF.size());
-//#if 0
-
-  //std::cout << "numOfEntries: " << numOfEntries << std::endl;
-  //uint8_t* destPos = reinterpret_cast<uint8_t*>(m_hashTable.data());
-  #if 0
-  size_t dstPos = 0;
-  size_t srcPos = 0;
-  size_t bytesCount = 0;
-  int entry = 0;
-  while(srcPos != strIBF.size())
-  //for (int i = 0; i < numOfEntries; ++i )
-  {
-    int32_t count = 0;
-    uint64_t keySum = 0;
-    uint32_t keyCheck = 0;
-    std::vector<uint8_t> valueSum;
-
-    std::memcpy(reinterpret_cast<uint8_t*>(&count),actual+srcPos, sizeof(count));
-    srcPos += sizeof(count);
-
-    if(count == 0)
-    {
-      // skip to the next entry
-      srcPos += sizeof(keySum) + sizeof(keyCheck) + 8;
-    }
-    else
-    {
-      std::memcpy(reinterpret_cast<uint8_t*>(&keySum),actual+srcPos, sizeof(keySum));
-      srcPos += sizeof(keySum);
-      std::memcpy(reinterpret_cast<uint8_t*>(&keyCheck),actual+srcPos, sizeof(keyCheck));
-      srcPos += sizeof(keyCheck) + 8;
-    }
-    std::cout << "count = " << count << ", keySum = " << keySum
-              << ", keyCheck = " << keyCheck << std::endl;
-    //std::cout << "srcPos = " << srcPos << std::endl;
-#if 0
-    // std::memcpy(destPos,actual + (i*entrySize), entrySize-valueSize);
-    // IBFT::HashTableEntry& e = m_hashTable.at(i);
-
-    //std::vector<uint8_t> v(*(actual + (i*entrySize) + entrySize-valueSize), valueSize);
-    //e.addValue(v);
-
-    // destPos += entrySize;
-    //std::memcpy(m_hashTable.data(),actual, strIBF.size());
-
-    //size_t pos, bytesCount = 0;
-    //IBFT::HashTableEntry& e = m_hashTable.at(i);
-
-    // copy count
-    //std::cout << "start pos: " << pos << std::endl;
-    bytesCount = sizeof(HashTableEntry::count);
-    int32_t count;
-    std::memcpy(reinterpret_cast<uint8_t*>(&count),actual+srcPos, bytesCount);
-  //  std::memcpy(m_hashTable.data()+dstPos,actual+srcPos, bytesCount);
-    std::cout << "count = " << count << std::endl;
-    if(count == 0)
-    {
-      // skip to the next entry
-    }
-    // copy count
-    // std::copy(actual + pos,
-    //           actual + pos + bytesCount,
-    //           reinterpret_cast<uint8_t*>((&e.count)));
-    // std::memcpy(&(e.count),
-    //             actual+pos,
-    //             bytesCount);
-    //std::cout << "copied e.count: " << e.count << std::endl;
-
-    // copy keySum
-    srcPos += bytesCount;
-    dstPos += bytesCount;
-    bytesCount = sizeof(HashTableEntry::keySum);
-    uint64_t keySum;
-    std::memcpy(reinterpret_cast<uint8_t*>(&keySum),actual+srcPos, bytesCount);
-    std::cout << "keySum = " << keySum << std::endl;
-    //std::memcpy(m_hashTable.data()+dstPos,actual+srcPos, bytesCount);
-    // std::copy(actual + pos,
-    //           actual + pos + bytesCount,
-    //           reinterpret_cast<uint8_t*>(&e.keySum));
-// std::cout << "copied e.keySum: " << e.keySum << std::endl;
-    // std::memcpy(reinterpret_cast<uint8_t*>(&(e.keySum)),
-    //             actual+pos,
-    //             bytesCount);
-
-
-    // copy keyCheck
-    srcPos += bytesCount;
-    dstPos += bytesCount;
-    bytesCount = sizeof(HashTableEntry::keyCheck);
-    std::memcpy(m_hashTable.data()+dstPos,actual+srcPos, bytesCount);
-//     std::copy(actual + pos,
-//               actual + pos + bytesCount,
-//               reinterpret_cast<uint8_t*>(&e.keyCheck));
-// std::cout << "copied e.keyCheck: " << e.keyCheck << std::endl;
-    // std::memcpy(&(e.keyCheck),
-    //             actual+pos,
-    //             bytesCount);
-
-    srcPos += bytesCount;
-    dstPos += bytesCount;
-    // check if valueSum was resized Before
-    if(count != 0)
-    {
-        // there is a value: need to copy valueSum
-
-        // set dstPos for next itr
-        srcPos += valueSize*2;
-        dstPos += valueSize*2;
-
-    }
-
-
-    // pos += sizeof(HashTableEntry::keyCheck);
-    // copy valueSum
-    pos += bytesCount;
-    std::vector<uint8_t> v(*(actual + pos), valueSize);
-    // std::vector<uint8_t> v(*(actual+(i*entrySize + pos)), valueSize);
-
-    //std::cout << "end: copied = " << pos + valueSize << std::endl;
-    e.addValue(v);
-    #endif
-  }
-  #endif
+  Block bufferBlock = Block(buf);
+  wireDecode(bufferBlock);
 }
 
 IBFT::~IBFT()
@@ -449,3 +280,295 @@ std::string IBFT::dumpItems() const
   }
   return result.str();
 }
+
+template<encoding::Tag T>
+size_t
+IBFT::wireEncode(EncodingImpl<T>& encoder) const
+{
+  size_t totalLength = 0;
+  int i = 0;
+  // go over m_hashTable
+  for(auto const& itr: m_hashTable)
+  {
+    if(!itr.empty())
+    {
+      size_t entryLength = 0;
+      entryLength += prependNonNegativeIntegerBlock(encoder, tlv::IBFEntryIndex, i);
+      std::string countStr = std::to_string(itr.count);
+      entryLength += prependStringBlock(encoder, tlv::IBFEntryCount, countStr);
+      entryLength += prependNonNegativeIntegerBlock(encoder, tlv::IBFEntryKeySum, itr.keySum);
+      entryLength += prependNonNegativeIntegerBlock(encoder, tlv::IBFEntryKeyCheck, itr.keyCheck);
+      entryLength += encoder.prependByteArrayBlock(tlv::IBFEntryValueSum, reinterpret_cast<const uint8_t*>(itr.valueSum.data()), itr.valueSum.size());
+
+      entryLength += encoder.prependVarNumber(entryLength);
+      entryLength += encoder.prependVarNumber(tlv::IBFEntry);
+      totalLength += entryLength;
+    }
+    ++i;
+  }
+  totalLength += encoder.prependVarNumber(totalLength);
+  totalLength += encoder.prependVarNumber(tlv::IBFTable);
+  return totalLength;
+}
+
+Block
+IBFT::wireEncode() const
+{
+  Block block;
+
+  EncodingEstimator estimator;
+  size_t estimatedSize = wireEncode(estimator);
+
+  EncodingBuffer buffer(estimatedSize);
+  wireEncode(buffer);
+
+  return buffer.block();
+}
+
+void
+IBFT::wireDecode(const Block& wire)
+{
+  if (!wire.hasWire())
+    std::cerr << "The supplied block does not contain wire format" << std::endl;
+
+  if (wire.type() != tlv::IBFTable)
+    std::cerr << "Unexpected TLV type when decoding reply: " +
+      boost::lexical_cast<std::string>(wire.type()) <<std::endl;
+
+  wire.parse();
+
+  // for each entry
+  for (Block::element_const_iterator it = wire.elements_begin();
+       it != wire.elements_end(); it++)
+  {
+    if (it->type() == tlv::IBFEntry)
+    {
+      it->parse();
+
+      Block::element_const_iterator entryIt = it->elements_begin();
+      HashTableEntry entry;
+      int index = 0;
+      int verifyEntry = 0;
+
+      while(entryIt != it->elements_end())
+      {
+        if (entryIt->type() == tlv::IBFEntryValueSum)
+        {
+          std::vector<uint8_t> v(entryIt->value(),
+                                  entryIt->value()+ entryIt->value_size());
+          entry.addValue(v);
+          ++verifyEntry;
+        }
+        if (entryIt->type() == tlv::IBFEntryKeyCheck)
+        {
+          entry.keyCheck = readNonNegativeInteger(*entryIt);
+          ++verifyEntry;
+        }
+        else if (entryIt->type() == tlv::IBFEntryKeySum)
+        {
+          entry.keySum = readNonNegativeInteger(*entryIt);
+          ++verifyEntry;
+        }
+        else if (entryIt->type() == tlv::IBFEntryCount)
+        {
+          std::string tmp(readString(*entryIt));
+          entry.count = std::atoi(tmp.c_str());
+          ++verifyEntry;
+        }
+        else if (entryIt->type() == tlv::IBFEntryIndex)
+        {
+          index = readNonNegativeInteger(*entryIt);
+          ++verifyEntry;
+        }
+        ++entryIt;
+      }
+      if(verifyEntry == 5)
+      {
+        m_hashTable.at(index) = entry;
+      }
+      else
+        std::cerr << "Missing TLVs in hash entry" <<std::endl;
+    }
+    //std::cout << "Table after decoder" << DumpTable()<< std::endl;
+  }
+}
+#if 0
+IBFT::IBFT(const char* buffer, size_t bufferSize, size_t _valueSize)
+  : valueSize(_valueSize)
+{
+  std::string fromBuf(buffer,bufferSize);
+  std::cout << " fromBuf" << fromBuf << std::endl;
+  std::cout << " bufferSize" << bufferSize << std::endl;
+  unsigned int numOfEntries = bufferSize / sizeof(HashTableEntry);
+  //m_hashTable.resize(numOfEntries);
+  const HashTableEntry* entryPtr = reinterpret_cast<const HashTableEntry*>(buffer);
+  //m_hashTable.insert(m_hashTable.begin(), entryPtr, entryPtr + numOfEntries);
+  for(int i = 0; i < numOfEntries; ++i)
+  {
+       std::cout << i << std::endl;
+       m_hashTable.push_back(*(entryPtr+i));
+  }
+  // std::cout << " numOfEntries" << numOfEntries << std::endl;
+  // std::vector<HashTableEntry> tbl(entryPtr, entryPtr + numOfEntries );
+  // std::cout << " init tbl" << numOfEntries << std::endl;
+  // m_hashTable = tbl;
+  // std::cout << " init m_hashTable" << numOfEntries << std::endl;
+
+}
+IBFT::IBFT(const std::string& strIBF, size_t _valueSize)
+  //: IBFT(_expectedNumEntries, _valueSize)
+  : valueSize(_valueSize)
+{
+  unsigned int numOfEntries = strIBF.size() / sizeof(HashTableEntry);
+  std::cout << " numOfEntries" << numOfEntries << std::endl;
+  const HashTableEntry* entryPtr = reinterpret_cast<const HashTableEntry*>(strIBF.c_str());
+  std::cout << " entryPtr" << entryPtr<< std::endl;
+
+  m_hashTable.insert(m_hashTable.begin(), entryPtr, entryPtr + numOfEntries);
+
+  // for(int i = 0; i < numOfEntries; ++i)
+  // {
+  //      std::cout << i << std::endl;
+  //      m_hashTable.push_back(*(entryPtr+i));
+  // }
+std::cout << " IBF end" << std::endl;
+  // every entry (4+8+4+valueSize) * # of entries
+  // size_t entrySize = sizeof(HashTableEntry::count)
+  //                    + sizeof(HashTableEntry::keySum)
+  //                    + sizeof(HashTableEntry::keyCheck)
+  //                    + valueSize;
+  //
+  // int numOfEntries = strIBF.size()/entrySize;
+  // const uint8_t* actual = reinterpret_cast<const uint8_t*>(strIBF.c_str());
+
+  // m_hashTable.resize(m_hashTable.size() + numOfEntries);
+  //std::memcpy(m_hashTable.data(),actual, strIBF.size());
+
+
+  //m_hashTable.insert(m_hashTable.end(), &strIBF[0], strIBF.size());
+//#if 0
+
+  //std::cout << "numOfEntries: " << numOfEntries << std::endl;
+  //uint8_t* destPos = reinterpret_cast<uint8_t*>(m_hashTable.data());
+  #if 0
+  size_t dstPos = 0;
+  size_t srcPos = 0;
+  size_t bytesCount = 0;
+  int entry = 0;
+  while(srcPos != strIBF.size())
+  //for (int i = 0; i < numOfEntries; ++i )
+  {
+    int32_t count = 0;
+    uint64_t keySum = 0;
+    uint32_t keyCheck = 0;
+    std::vector<uint8_t> valueSum;
+
+    std::memcpy(reinterpret_cast<uint8_t*>(&count),actual+srcPos, sizeof(count));
+    srcPos += sizeof(count);
+
+    if(count == 0)
+    {
+      // skip to the next entry
+      srcPos += sizeof(keySum) + sizeof(keyCheck) + 8;
+    }
+    else
+    {
+      std::memcpy(reinterpret_cast<uint8_t*>(&keySum),actual+srcPos, sizeof(keySum));
+      srcPos += sizeof(keySum);
+      std::memcpy(reinterpret_cast<uint8_t*>(&keyCheck),actual+srcPos, sizeof(keyCheck));
+      srcPos += sizeof(keyCheck) + 8;
+    }
+    std::cout << "count = " << count << ", keySum = " << keySum
+              << ", keyCheck = " << keyCheck << std::endl;
+    //std::cout << "srcPos = " << srcPos << std::endl;
+#if 0
+    // std::memcpy(destPos,actual + (i*entrySize), entrySize-valueSize);
+    // IBFT::HashTableEntry& e = m_hashTable.at(i);
+
+    //std::vector<uint8_t> v(*(actual + (i*entrySize) + entrySize-valueSize), valueSize);
+    //e.addValue(v);
+
+    // destPos += entrySize;
+    //std::memcpy(m_hashTable.data(),actual, strIBF.size());
+
+    //size_t pos, bytesCount = 0;
+    //IBFT::HashTableEntry& e = m_hashTable.at(i);
+
+    // copy count
+    //std::cout << "start pos: " << pos << std::endl;
+    bytesCount = sizeof(HashTableEntry::count);
+    int32_t count;
+    std::memcpy(reinterpret_cast<uint8_t*>(&count),actual+srcPos, bytesCount);
+  //  std::memcpy(m_hashTable.data()+dstPos,actual+srcPos, bytesCount);
+    std::cout << "count = " << count << std::endl;
+    if(count == 0)
+    {
+      // skip to the next entry
+    }
+    // copy count
+    // std::copy(actual + pos,
+    //           actual + pos + bytesCount,
+    //           reinterpret_cast<uint8_t*>((&e.count)));
+    // std::memcpy(&(e.count),
+    //             actual+pos,
+    //             bytesCount);
+    //std::cout << "copied e.count: " << e.count << std::endl;
+
+    // copy keySum
+    srcPos += bytesCount;
+    dstPos += bytesCount;
+    bytesCount = sizeof(HashTableEntry::keySum);
+    uint64_t keySum;
+    std::memcpy(reinterpret_cast<uint8_t*>(&keySum),actual+srcPos, bytesCount);
+    std::cout << "keySum = " << keySum << std::endl;
+    //std::memcpy(m_hashTable.data()+dstPos,actual+srcPos, bytesCount);
+    // std::copy(actual + pos,
+    //           actual + pos + bytesCount,
+    //           reinterpret_cast<uint8_t*>(&e.keySum));
+// std::cout << "copied e.keySum: " << e.keySum << std::endl;
+    // std::memcpy(reinterpret_cast<uint8_t*>(&(e.keySum)),
+    //             actual+pos,
+    //             bytesCount);
+
+
+    // copy keyCheck
+    srcPos += bytesCount;
+    dstPos += bytesCount;
+    bytesCount = sizeof(HashTableEntry::keyCheck);
+    std::memcpy(m_hashTable.data()+dstPos,actual+srcPos, bytesCount);
+//     std::copy(actual + pos,
+//               actual + pos + bytesCount,
+//               reinterpret_cast<uint8_t*>(&e.keyCheck));
+// std::cout << "copied e.keyCheck: " << e.keyCheck << std::endl;
+    // std::memcpy(&(e.keyCheck),
+    //             actual+pos,
+    //             bytesCount);
+
+    srcPos += bytesCount;
+    dstPos += bytesCount;
+    // check if valueSum was resized Before
+    if(count != 0)
+    {
+        // there is a value: need to copy valueSum
+
+        // set dstPos for next itr
+        srcPos += valueSize*2;
+        dstPos += valueSize*2;
+
+    }
+
+
+    // pos += sizeof(HashTableEntry::keyCheck);
+    // copy valueSum
+    pos += bytesCount;
+    std::vector<uint8_t> v(*(actual + pos), valueSize);
+    // std::vector<uint8_t> v(*(actual+(i*entrySize + pos)), valueSize);
+
+    //std::cout << "end: copied = " << pos + valueSize << std::endl;
+    e.addValue(v);
+    #endif
+  }
+  #endif
+}
+#endif
+} // end namespace notificationLib
