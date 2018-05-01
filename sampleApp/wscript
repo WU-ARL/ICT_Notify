@@ -21,3 +21,8 @@ def build(bld):
        features='cxx cxxprogram',
        source='statusApp.cpp',
        use=TOOLS_DEPENDENCY)
+
+    bld(target='bin/testEndPoint',
+      features='cxx cxxprogram',
+      source='testEndPoint.cpp',
+      use=TOOLS_DEPENDENCY)

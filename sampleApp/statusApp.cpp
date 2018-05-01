@@ -75,13 +75,13 @@ namespace ndn {
                                                                      notificationLib::api::DEFAULT_VALIDATOR);
 
       m_notificationHandler->init(m_fileName,
-                                  std::bind(&StatusApp::onNotificationUpdateWithTime, this, _1));
+                                  std::bind(&StatusApp::onNotificationUpdateWithTime, this, _1, _2));
 
       // no need
       //m_notificationHandler->registerNotificationPrefix(m_eventName);
       sleep (2);
     }
-    void onNotificationUpdateWithTime (const std::map<uint64_t,std::vector<Name>>& notificationList)
+    void onNotificationUpdateWithTime (uint64_t receivedTime, const std::map<uint64_t,std::vector<Name>>& notificationList)
     {
       for(auto const& iList: notificationList)
       {

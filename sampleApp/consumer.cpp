@@ -80,11 +80,11 @@ namespace ndn {
       //                             std::bind(&NotificationConsumer::onNotificationUpdate, this, _1));
 
       m_notificationHandler->init(m_fileName,
-                                  std::bind(&NotificationConsumer::onNotificationUpdateWithTime, this, _1));
+                                  std::bind(&NotificationConsumer::onNotificationUpdateWithTime, this, _1, _2));
       sleep (2);
     }
 
-    void onNotificationUpdateWithTime (const std::map<uint64_t,std::vector<Name>>& notificationList)
+    void onNotificationUpdateWithTime (uint64_t receivedTime, const std::map<uint64_t,std::vector<Name>>& notificationList)
     {
       for (size_t i = 0; i < notificationList.size(); i++) {
           //std::cout << " application received notification: " << nameList[i] << std::endl;

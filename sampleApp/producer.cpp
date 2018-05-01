@@ -93,11 +93,11 @@ namespace ndn {
                                                                        notificationLib::api::DEFAULT_VALIDATOR);
 
         m_notificationHandler->init(m_fileName,
-                std::bind(&NotificationProducer::onNotificationUpdateWithTime, this, _1));
+                std::bind(&NotificationProducer::onNotificationUpdateWithTime, this, _1, _2));
         //m_notificationHandler->registerNotificationPrefix(m_name);
 
     }
-    void onNotificationUpdateWithTime (const std::map<uint64_t,std::vector<Name>>& notificationList)
+    void onNotificationUpdateWithTime (uint64_t receivedTime, const std::map<uint64_t,std::vector<Name>>& notificationList)
     {
       for (size_t i = 0; i < notificationList.size(); i++) {
           //std::cout << " application received notification: " << nameList[i] << std::endl;

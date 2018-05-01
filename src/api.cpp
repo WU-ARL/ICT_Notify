@@ -218,7 +218,7 @@ void api::onNotificationUpdate (const Name& notificationName,
     if(!matchedNames.empty())
     {
       matchedNotifications[timestamp] = matchedNames;
-      m_onNotificationAppCB(matchedNotifications);
+      m_onNotificationAppCB(now_ns_long_type, matchedNotifications);
 
     }
   }

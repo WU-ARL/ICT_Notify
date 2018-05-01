@@ -70,7 +70,7 @@ using ndn::make_unique;
 
 
 //using NotificationAppCallback = function<void(const std::vector<Name>&)>;
-using NotificationAppCallback = function<void(const std::map<uint64_t,std::vector<Name>>&)>;
+using NotificationAppCallback = function<void(uint64_t receivedTime, const std::map<uint64_t,std::vector<Name>>&)>;
 using NotificationAPICallback = function<void(const Name&, const std::map<uint64_t,std::vector<Name>>&)>;
 
 namespace tlv {
