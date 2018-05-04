@@ -25,7 +25,9 @@ namespace notificationLib
       IBFEntryValueSum = 141,
       IBFEntryIndex = 142,
       IBFEntry = 143,
-      IBFTable = 143
+      IBFTable = 143,
+      ListEntry = 144,
+      ListTable = 145
     };
   }
   // namespace dataType

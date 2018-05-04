@@ -20,6 +20,7 @@ public:
                const time::milliseconds memoryFreshness,
                bool isListener,
                bool isProvider,
+               bool isList,
                ndn::Face& face,
                NotificationAPICallback notificationCB);
 

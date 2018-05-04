@@ -30,13 +30,17 @@ namespace ndn {
     NotificationProducer(char* programName)
     : m_programName(programName)
     , m_randomGenerator(std::random_device{}())
-    , m_eventNameDist(1,5)
-    , m_eventSchedDist(1,20)
+    , m_eventNameDist(100,10000)
+    , m_eventSchedDist(1,5)
     , m_eventsCounter(0)
     , m_scheduler(m_face.getIoService())
     , m_totalEventsToSend(0)
     {
+      m_receivedStream << "Recieved At: \t\t " << "Sent At: \t "
+                       << "diff (ns)   " << "Names" << std::endl;
 
+
+      m_next = 0;
     }
 
     void
@@ -44,12 +48,13 @@ namespace ndn {
     {
       std::cout << "\n Usage:\n " << m_programName <<
       ""
-      " [-h] -f filters_file  -n events_number -l log_name [-d debug_mode]\n"
+      " [-h] -f filters_file  -n events_number -i id -l log_name [-d debug_mode]\n"
       " Register and push event notifications.\n"
       "\n"
       " \t-h - print this message and exit\n"
       " \t-f - configuration file \n"
       " \t-n - total number of events to send \n"
+      " \t-i - id to set in event \n"
       " \t-l - log file name \n"
       " \t-d - sets the debug mode, 1 - debug on, 0 - debug off (default)\n"
       "\n";
@@ -69,7 +74,7 @@ namespace ndn {
       //m_allSentEvents.reserve(m_totalEventsToSend);
 
       m_sentEventId =
-        m_scheduler.scheduleEvent(ndn::time::milliseconds(m_eventSchedDist(m_randomGenerator)),
+        m_scheduler.scheduleEvent(ndn::time::seconds(m_eventSchedDist(m_randomGenerator)),
                                   bind(&NotificationProducer::sendEvent,this));
 
       while (true)
@@ -121,15 +126,24 @@ namespace ndn {
 
       return event;
     }
+    Name
+    getNextEvent()
+    {
+      Name event("/test/event/");
+      event.append(m_id);
+      event.appendNumber(m_next);
+      ++m_next;
+      return event;
+    }
     void onNotificationUpdateWithTime (uint64_t receivedTime, const std::map<uint64_t,std::vector<Name>>& notificationList)
     {
-      std::cout << "print to m_receivedStream" << std::endl;
-      m_receivedStream << "Recieved At: \t " << "Sent At: \t " << "Names" << std::endl;
       for(auto const& iList: notificationList)
       {
         m_allRecievedEvents[iList.first] = iList.second;
+        m_diff.push_back(receivedTime - iList.first);
         m_receivedStream << receivedTime << ", ";
         m_receivedStream << iList.first << ", ";
+        m_receivedStream << receivedTime - iList.first << ", ";
         for (size_t i = 0; i < iList.second.size(); i++)
         {
           m_receivedStream << ", " << iList.second[i];
@@ -140,7 +154,16 @@ namespace ndn {
     void Log()
     {
       std::ofstream output(m_logFile.c_str());
+      output << "Total sent: " << m_allSentEvents.size() << std::endl;
+      output << "Total received: " << m_allRecievedEvents.size() << std::endl;
 
+      uint64_t sum = std::accumulate(m_diff.begin(), m_diff.end(), 0);
+
+      if(m_allRecievedEvents.size() != 0)
+      {
+        double avg = sum / m_diff.size();
+        output << "Avg latency (ns): " << avg << std::endl;
+      }
       output << "Events sent: ";
       for(auto const& iSent: m_allSentEvents)
       {
@@ -148,8 +171,23 @@ namespace ndn {
       }
       output << std::endl;
 
-      if(m_receivedStream.rdbuf()!= NULL)
-        output << m_receivedStream.rdbuf();
+      if(m_receivedStream.rdbuf() != NULL)
+      {
+        //std::cout << m_receivedStream.rdbuf() << std::endl;
+        output << m_receivedStream.str() << std::endl;
+      }
+      output << "Interest name sizes: "<< std::endl;
+      for(auto iSize: notificationLib::api::m_InterestNameSizeCollector)
+      {
+        output << iSize.first << ", " << iSize.second << std::endl;
+      }
+      output << "Data name sizes: "<< std::endl;
+      for(auto iSize: notificationLib::api::m_DataNameSizeCollector)
+      {
+        output << iSize.first << ", " << iSize.second << std::endl;
+      }
+      output.close();
+      sleep (2);
     }
     void setTotalEventsNum(int num)
     {
@@ -159,6 +197,11 @@ namespace ndn {
     {
       m_logFile = fileName;
     }
+    void setId(std::string id)
+    {
+      m_id = id;
+    }
+
     void sendEvent()
     {
       if (m_allSentEvents.size() < m_totalEventsToSend)
@@ -166,7 +209,8 @@ namespace ndn {
         Name event;
         std::vector<Name> eventList;
 
-        event = getRandomEvent();
+        //event = getRandomEvent();
+        event = getNextEvent();
         eventList.push_back(event);
         m_allSentEvents.push_back(event);
         m_eventsCounter++;
@@ -175,7 +219,7 @@ namespace ndn {
 
         // schedule the next sending
         m_sentEventId =
-          m_scheduler.scheduleEvent(ndn::time::milliseconds(m_eventSchedDist(m_randomGenerator)),
+          m_scheduler.scheduleEvent(ndn::time::seconds(m_eventSchedDist(m_randomGenerator)),
                                     bind(&NotificationProducer::sendEvent,this));
       }
 
@@ -202,12 +246,16 @@ namespace ndn {
     ndn::Scheduler m_scheduler;
     ndn::EventId m_sentEventId;
     std::vector<Name> m_allSentEvents;
+    std::vector<uint64_t> m_diff;
     std::map<uint64_t,std::vector<Name>> m_allRecievedEvents;
     std::mt19937 m_randomGenerator;
     std::uniform_int_distribution<> m_eventNameDist;
     std::uniform_int_distribution<> m_eventSchedDist;
     std::string m_logFile;
-    std::ostringstream m_receivedStream;
+    //std::ostringstream m_receivedStream;
+    std::stringstream m_receivedStream;
+    int m_next;
+    std::string m_id;
 
   };
 } // namespace ndn
@@ -221,8 +269,9 @@ main(int argc, char* argv[])
   int option;
   bool fileSet = false;
   bool LogSet = false;
+  bool idSet = false;
 
-  while ((option = getopt(argc, argv, "hf:n:l:d:")) != -1)
+  while ((option = getopt(argc, argv, "hf:n:l:i:d:")) != -1)
   {
     switch (option)
     {
@@ -240,6 +289,10 @@ main(int argc, char* argv[])
         producer.setLogFileName(optarg);
         LogSet = true;
         break;
+      case 'i':
+        producer.setId(optarg);
+        idSet = true;
+        break;
       case 'd':
         DEBUG = atoi(optarg);
         break;
@@ -252,7 +305,7 @@ main(int argc, char* argv[])
   argc -= optind;
   argv += optind;
 
-  if(!fileSet || !LogSet ) {
+  if(!fileSet || !LogSet || !idSet ) {
     producer.usage();
     return 1;
   }

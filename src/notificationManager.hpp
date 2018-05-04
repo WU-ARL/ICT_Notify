@@ -40,6 +40,7 @@ namespace notificationLib
                          const Name& notificationName,
                          size_t maxNotificationMemory,
                          const time::milliseconds& notificationMemoryFreshness,
+                         bool isList,
                          //const Name& notificationPrefix,
                          const NotificationAPICallback& onUpdate,
                          const Name& defaultSigningId,

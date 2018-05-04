@@ -1,10 +1,11 @@
 notification
 {
 	name /wustl/test/service
-	maxMemorySize 100
-	memoryFreshness 5
+	maxMemorySize 50
+	memoryFreshness 7
 	isListener true
 	isProvider true
+	isList true
 	event
 	{
 		filter

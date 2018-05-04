@@ -11,6 +11,7 @@ Notification::Notification(const Name& name,
                           time::milliseconds memoryFreshness,
                           bool isListener,
                           bool isProvider,
+                          bool isList,
                           ndn::Face& face,
                           NotificationAPICallback notificationCB)
   : m_notificationName(name)
@@ -21,6 +22,7 @@ Notification::Notification(const Name& name,
                            name,
                            maxNotificationMemory,
                            memoryFreshness,
+                           isList,
                            notificationCB,
                            api::DEFAULT_NAME,
                            api::DEFAULT_VALIDATOR,
@@ -89,8 +91,18 @@ Notification::create(const ConfigSection& configSection,
   if (!isListener && !isProvider)
     BOOST_THROW_EXCEPTION(Error("isListener and isProvider are both false, expecting at least one to be true"));
 
+  // Get notification.isProvider
+  bool isList = false;
+  if (propertyIt == configSection.end() || !boost::iequals(propertyIt->first, "isList")) {
+    BOOST_THROW_EXCEPTION(Error("Expecting <notification.isList>"));
+  }
+
+  if(propertyIt->second.data() == "true")
+    isList = true;
+  propertyIt++;
+
   auto notification = make_unique<Notification>(name, maxNotificationMemory, time::milliseconds(memoryFreshness),
-                                                isListener, isProvider, face, notificationCB);
+                                                isListener, isProvider, isList, face, notificationCB);
 
   if (isListener)
   {

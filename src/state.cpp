@@ -8,8 +8,9 @@ INIT_LOGGER(state);
 
 namespace notificationLib {
 
-State::State(size_t maxNotificationMemory)
+State::State(size_t maxNotificationMemory, bool isList)
   : m_maxNotificationMemory(maxNotificationMemory)
+  , m_isList(isList)
   , m_ibft(maxNotificationMemory, 4) // 4 bytes hash value size in ibf
                                      // key size (timestamp) is 8 bytes
 {
@@ -37,18 +38,73 @@ State::update(const std::vector<Name>& eventList)
   _saveHistory(now_ns_long_type, eventList);
   return now_ns_long_type;
 }
+void
+State::erase(const uint64_t timestamp)
+{
+  _LOG_DEBUG("State::erase(): remove timestamp " << timestamp);
+  m_ibft.erase(timestamp, _pseudoRandomValue(timestamp));
+
+  //std::cout << "Table after update" << m_ibft.DumpTable()<< std::endl;
+  _removeFromHistory(timestamp);
+
+}
+bool
+State::isExpired(const uint64_t now, uint64_t timestamp, ndn::time::milliseconds max_fresh)
+{
+  _LOG_DEBUG("State::isExpired(): now " << now);
+  _LOG_DEBUG("State::isExpired(): timestamp " << timestamp);
+  auto tPasses = now - timestamp;
+  _LOG_DEBUG("State::isExpired(): tPasses " << tPasses);
+  if(tPasses > (max_fresh.count()*1000000))
+  {
+    _LOG_DEBUG("State::isExpired(): expired!!" << tPasses);
+    return true;
+  }
+  return false;
+}
 
 ConstBufferPtr
 State::getState() const
 {
-  Block ibfBlock = m_ibft.wireEncode();
-  // auto contentBuffer = bzip2::compress(reinterpret_cast<const char*>(m_ibft.getIBFBuffer()),
-  //                                         m_ibft.getIBFSize());
+  if(m_isList)
+  {
+    size_t estimatedSize = 0;
+    EncodingEstimator estimator;
+    //size_t estimatedSize = wireEncode(estimator);
+    for(auto iTime: m_NotificationHistory)
+    {
+      estimatedSize += prependNonNegativeIntegerBlock(estimator, tlv::ListEntry, iTime.first);
+    }
+    estimatedSize += estimator.prependVarNumber(estimatedSize);
+    estimatedSize += estimator.prependVarNumber(tlv::ListTable);
 
-  auto contentBuffer = bzip2::compress(reinterpret_cast<const char*>(ibfBlock.wire()),
-                                       ibfBlock.size());
+    EncodingBuffer buffer(estimatedSize);
+    estimatedSize = 0;
+    for(auto iTime: m_NotificationHistory)
+    {
+      estimatedSize += prependNonNegativeIntegerBlock(buffer, tlv::ListEntry, iTime.first);
+    }
+    estimatedSize += buffer.prependVarNumber(estimatedSize);
+    estimatedSize += buffer.prependVarNumber(tlv::ListTable);
 
-  return contentBuffer;
+
+    //wireEncode(buffer);
+
+    Block listBlock = buffer.block();
+
+    auto contentBuffer = bzip2::compress(reinterpret_cast<const char*>(listBlock.wire()),
+                                                                      listBlock.size());
+    return contentBuffer;
+  }
+  else
+  {
+    Block ibfBlock = m_ibft.wireEncode();
+
+    auto contentBuffer = bzip2::compress(reinterpret_cast<const char*>(ibfBlock.wire()),
+                                                                      ibfBlock.size());
+    return contentBuffer;
+  }
+
 }
 
 bool State::getDiff(ConstBufferPtr rmtStateStr,
@@ -58,20 +114,65 @@ bool State::getDiff(ConstBufferPtr rmtStateStr,
   auto remoteBuf = bzip2::decompress(rmtStateStr->get<char>(),
                                      rmtStateStr->size());
 
+  if(m_isList)
+  {
+    Block bufferBlock = Block(remoteBuf);
+    std::vector<uint8_t> emptyVec;
+    std::vector<uint64_t> decodedVec;
+    if(!bufferBlock.hasWire())
+    {
+      _LOG_ERROR("no wire");
+      return false;
+    }
 
-  //IBFT remoteIBF(remoteBuf->get<char>(), remoteBuf->size(), 4);
-  IBFT remoteIBF(remoteBuf, m_maxNotificationMemory, 4);
+    if (bufferBlock.type() != tlv::ListTable)
+    {
+      _LOG_ERROR("expecting tlv::ListTable");
+      return false;
+    }
+    bufferBlock.parse();
+    for (Block::element_const_iterator it = bufferBlock.elements_begin();
+         it != bufferBlock.elements_end(); it++)
+    {
+      if (it->type() == tlv::ListEntry)
+      {
+        uint64_t remoteTime =  readNonNegativeInteger(*it);
+        decodedVec.push_back(remoteTime);
+        //std::cout << "  *****Decoded: "<< remoteTime << std::endl;
+      }
+    }
+    // create inLocal, if local is not in decoded then add
+    for(auto i: m_NotificationHistory)
+    {
+      if ( std::find(decodedVec.begin(), decodedVec.end(), i.first) == decodedVec.end() )
+         inLocal.insert(std::make_pair(i.first, emptyVec));
+    }
+    // create inRemote, if decoded not in local history then add
+    for(auto i: decodedVec)
+    {
+      auto entry = m_NotificationHistory.find(i);
+      if( entry == m_NotificationHistory.end())
+        inRemote.insert(std::make_pair(i, emptyVec));
+    }
+    return true;
+  }
+  else
+  {
+    IBFT remoteIBF(remoteBuf, m_maxNotificationMemory, 4);
 
-  // std::cout << "My IBF" << m_ibft.dumpItems() << std::endl;
-  // std::cout << "Remote" << remoteIBF.dumpItems() << std::endl;
+    // std::cout << "My IBF" << m_ibft.dumpItems() << std::endl;
+    // std::cout << "Remote" << remoteIBF.dumpItems() << std::endl;
 
-  IBFT diff = m_ibft-remoteIBF;
-  return (diff.listEntries(inLocal, inRemote));
+    IBFT diff = m_ibft-remoteIBF;
+    return (diff.listEntries(inLocal, inRemote));
+  }
 }
 
 bool
-State::reconcile(ConstBufferPtr newState, NotificationData& data)
+State::reconcile(ConstBufferPtr newState, NotificationData& data, ndn::time::milliseconds max_freshness)
 {
+  auto now_ns = boost::chrono::time_point_cast<boost::chrono::nanoseconds>(ndn::time::system_clock::now());
+  auto now_ns_long_type = (now_ns.time_since_epoch()).count();
   std::set<std::pair<uint64_t,std::vector<uint8_t> > > inNew, inOld;
   //ConstBufferPtr oldState  = getState();
   if (getDiff(newState, inOld, inNew))
@@ -79,7 +180,8 @@ State::reconcile(ConstBufferPtr newState, NotificationData& data)
     // for now, only add new timestamps to local IBF and History
     for(auto const& newit: inNew)
     {
-      addTimestamp(newit.first, data.m_eventsObj.getEventList(newit.first));
+      if(!State::isExpired(now_ns_long_type, newit.first, max_freshness))
+        addTimestamp(newit.first, data.m_eventsObj.getEventList(newit.first));
       //listToPush[lit.first] = m_state.getEventsAtTimestamp(lit.first);
     }
     // TBD - handle removals
@@ -89,6 +191,39 @@ State::reconcile(ConstBufferPtr newState, NotificationData& data)
   {
     _LOG_ERROR("State::reconcile: Unable to get Diff");
     return false;
+  }
+}
+void
+State::cleanup(ndn::time::milliseconds max_freshness)
+{
+  auto now_ns = boost::chrono::time_point_cast<boost::chrono::nanoseconds>(ndn::time::system_clock::now());
+  auto now_ns_long_type = (now_ns.time_since_epoch()).count();
+
+  std::set<std::pair<uint64_t,std::vector<uint8_t> > > positive;
+  std::set<std::pair<uint64_t,std::vector<uint8_t> > > negative;
+
+  if(m_ibft.listEntries(positive, negative))
+  {
+    std::set<std::pair<uint64_t,std::vector<uint8_t> > > :: iterator it; //iterator to manipulate set
+    for (it = positive.begin(); it!=positive.end(); it++)
+    {
+        std::pair<uint64_t,std::vector<uint8_t> > m = *it; // returns pair to m
+        if(isExpired(now_ns_long_type, m.first, max_freshness))
+        {
+
+          // remove from state
+          erase(m.first);
+        }
+    }
+    for (it = negative.begin(); it!=negative.end(); it++)
+    {
+        std::pair<uint64_t,std::vector<uint8_t> > m = *it; // returns pair to m
+        if(isExpired(now_ns_long_type, m.first, max_freshness))
+        {
+          // remove from state
+          erase(m.first);
+        }
+    }
   }
 }
 
@@ -102,12 +237,19 @@ State::getEventsAtTimestamp(uint64_t timestamp)
   else
     return emptyVec;
 }
+void
+State::_removeFromHistory(uint64_t timestamp)
+{
+  _LOG_DEBUG("State::_removeFromHistory");
+
+  m_NotificationHistory.erase(timestamp);
+
+}
 
 void
 State::_saveHistory(uint64_t timestamp, const std::vector<Name>&eventList)
 {
   _LOG_DEBUG("State::_saveHistory");
-  for(auto const& eit: eventList)
 
   m_NotificationHistory[timestamp] = eventList;
 

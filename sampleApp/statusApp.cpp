@@ -173,6 +173,7 @@ int
 main(int argc, char* argv[])
 {
   ndn::StatusApp statusApp(argv[0], nullptr);
+
   int option;
   bool userNameSet = false;
   bool filterSet = false;

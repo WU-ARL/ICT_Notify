@@ -15,8 +15,11 @@ const ndn::Name api::EMPTY_NAME;
 const ndn::Name api::DEFAULT_NAME;
 //const NotificationData api::EMPTY_EVENT_LIST;
 const std::shared_ptr<Validator> api::DEFAULT_VALIDATOR;
-const time::milliseconds api::DEFAULT_EVENT_INTEREST_LIFETIME(10000);
-const time::milliseconds api::DEFAULT_EVENT_FRESHNESS(1);
+const time::milliseconds api::DEFAULT_EVENT_INTEREST_LIFETIME(5000);
+const time::milliseconds api::DEFAULT_EVENT_FRESHNESS(4);
+
+std::map<uint64_t,int> api::m_DataNameSizeCollector;
+std::map<uint64_t,int> api::m_InterestNameSizeCollector;
 
 api::api(ndn::Face& face,
          const Name& signingId,
@@ -30,6 +33,7 @@ api::api(ndn::Face& face,
    , m_signingId(signingId)
   , m_validator(validator)
 {
+
 }
 
 api::~api()
@@ -198,7 +202,7 @@ void api::onNotificationUpdate (const Name& notificationName,
                             {return (event->match(eventName));});
       if (it != eventList.end())
       {
-        _LOG_INFO("api::onNotificationUpdate matched event: " << eventName);
+        _LOG_DEBUG("api::onNotificationUpdate matched event: " << eventName);
 
         // check if event expired
         // how long past
@@ -208,11 +212,11 @@ void api::onNotificationUpdate (const Name& notificationName,
         auto freshnessInNano =  (notification->m_notificationProtocol).getFreshnessInNanoSeconds();
         if(tPassed <= freshnessInNano)
         {
-          _LOG_INFO("api::onNotificationUpdate is still fresh: " << eventName);
+          _LOG_DEBUG("api::onNotificationUpdate is still fresh: " << eventName);
           matchedNames.push_back(eventName);
         }
         else
-          _LOG_INFO("api::onNotificationUpdate is NOT fresh: " << eventName);
+          _LOG_DEBUG("api::onNotificationUpdate is NOT fresh: " << eventName);
      }
     }
     if(!matchedNames.empty())
@@ -271,4 +275,17 @@ int api::getNotificationIndex(const Name& notificationName)
   return(std::distance(m_notificationList.begin(),it));
 }
 
-} // namespace notificationLib
+void
+api::collectNameSize(int type, uint32_t number)
+{
+  auto now_ns = boost::chrono::time_point_cast<boost::chrono::nanoseconds>(ndn::time::system_clock::now());
+  auto now_ns_long_type = (now_ns.time_since_epoch()).count();
+
+  // get time
+  if(type == 1)
+    m_InterestNameSizeCollector[now_ns_long_type] = number;
+  else if(type == 2)
+    m_DataNameSizeCollector[now_ns_long_type] = number;
+
+}
+}

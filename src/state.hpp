@@ -20,7 +20,7 @@ namespace notificationLib {
 class State : noncopyable
 {
 public:
-  State(size_t maxNotificationMemory);
+  State(size_t maxNotificationMemory, bool isList);
 
   void addTimestamp(uint64_t timestamp, const std::vector<Name>& eventList);
   uint64_t update(const std::vector<Name>& eventList);
@@ -31,7 +31,21 @@ public:
                std::set<std::pair<uint64_t,std::vector<uint8_t> > >& inLocal,
                std::set<std::pair<uint64_t,std::vector<uint8_t> > >& inRemote) const;
 
-  bool reconcile(ConstBufferPtr newState, NotificationData& data);
+  static bool
+  isExpired(const uint64_t now,
+            uint64_t timestamp,
+            ndn::time::milliseconds max_freshness);
+
+  void
+  erase(const uint64_t timestamp);
+
+  void
+  cleanup(ndn::time::milliseconds max_freshness);
+
+
+  bool reconcile(ConstBufferPtr newState,
+                 NotificationData& data,
+                 ndn::time::milliseconds max_freshness);
 
   std::vector<Name>& getEventsAtTimestamp(uint64_t timestamp);
 
@@ -46,9 +60,12 @@ private:
 
   void _saveHistory(uint64_t timestamp, const std::vector<Name>&eventList);
 
+  void _removeFromHistory(uint64_t timestamp);
+
   size_t m_maxNotificationMemory;
   // history containers
   IBFT m_ibft;
+  bool m_isList;
   std::map<uint64_t,shared_ptr<Data>> m_DataList;
   std::map<uint64_t,std::vector<Name>> m_NotificationHistory;
 };

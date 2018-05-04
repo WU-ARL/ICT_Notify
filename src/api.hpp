@@ -44,6 +44,13 @@ public:
   //
   // using DataValidationErrorCallback = function<void(const Data&, const ValidationError& error)> ;
 
+  // for collecting
+  static std::map<uint64_t,int> m_DataNameSizeCollector;
+  static std::map<uint64_t,int> m_InterestNameSizeCollector;
+
+  static void
+  collectNameSize(int type, uint32_t number); // type: 1-interest, 2- Data
+
 private:
 
 
@@ -56,6 +63,10 @@ private:
 
   int
   getNotificationIndex(const Name& notificationName);
+
+  // for collecting
+  static
+  void reserveCollectors();
 
 public:
   static const ndn::Name EMPTY_NAME;
