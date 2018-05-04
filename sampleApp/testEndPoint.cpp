@@ -108,11 +108,10 @@ namespace ndn {
       m_notificationHandler = std::make_shared<notificationLib::api>(m_face,
                                                                      notificationLib::api::DEFAULT_NAME,
                                                                      notificationLib::api::DEFAULT_VALIDATOR);
-     sleep(5);
       m_notificationHandler->init(m_fileName,
               std::bind(&NotificationProducer::onNotificationUpdateWithTime, this, _1, _2));
         //m_notificationHandler->registerNotificationPrefix(m_name);
-
+      sleep(2);
     }
     static void signalHandler( int signum )
     {
@@ -158,6 +157,7 @@ namespace ndn {
       std::ofstream output(m_logFile.c_str());
       output << "Total sent: " << m_allSentEvents.size() << std::endl;
       output << "Total received: " << m_allRecievedEvents.size() << std::endl;
+      output << "Total in diff: " << m_diff.size() << std::endl;
 
       uint64_t sum = std::accumulate(m_diff.begin(), m_diff.end(), 0);
 
@@ -299,7 +299,6 @@ main(int argc, char* argv[])
         DEBUG = atoi(optarg);
         break;
       case 'p':
-        std::cout << "PUBLISHeR" << std::endl;
         PUBLISHER = 1;
         break;
       default:
