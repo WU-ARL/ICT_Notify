@@ -21,6 +21,7 @@
 #include <../src/api.hpp>
 // global variable to support debug
 int DEBUG = 0;
+int PUBLISHER = 0;
 
 namespace ndn {
   class NotificationProducer
@@ -48,7 +49,7 @@ namespace ndn {
     {
       std::cout << "\n Usage:\n " << m_programName <<
       ""
-      " [-h] -f filters_file  -n events_number -i id -l log_name [-d debug_mode]\n"
+      " [-h] -f filters_file  -n events_number -i id -l log_name [-p publisher][-d debug_mode]\n"
       " Register and push event notifications.\n"
       "\n"
       " \t-h - print this message and exit\n"
@@ -73,9 +74,10 @@ namespace ndn {
     {
       //m_allSentEvents.reserve(m_totalEventsToSend);
 
-      m_sentEventId =
-        m_scheduler.scheduleEvent(ndn::time::seconds(m_eventSchedDist(m_randomGenerator)),
-                                  bind(&NotificationProducer::sendEvent,this));
+      if(PUBLISHER)
+        m_sentEventId =
+          m_scheduler.scheduleEvent(ndn::time::seconds(m_eventSchedDist(m_randomGenerator)),
+                                    bind(&NotificationProducer::sendEvent,this));
 
       while (true)
       {
@@ -271,7 +273,7 @@ main(int argc, char* argv[])
   bool LogSet = false;
   bool idSet = false;
 
-  while ((option = getopt(argc, argv, "hf:n:l:i:d:")) != -1)
+  while ((option = getopt(argc, argv, "hf:n:l:i:pd:")) != -1)
   {
     switch (option)
     {
@@ -295,6 +297,10 @@ main(int argc, char* argv[])
         break;
       case 'd':
         DEBUG = atoi(optarg);
+        break;
+      case 'p':
+        std::cout << "PUBLISHeR" << std::endl;
+        PUBLISHER = 1;
         break;
       default:
         producer.usage();
