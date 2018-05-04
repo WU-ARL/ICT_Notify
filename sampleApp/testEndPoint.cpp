@@ -104,6 +104,7 @@ namespace ndn {
       // register signal SIGINT and signal handler
       signal(SIGINT, NotificationProducer::signalHandler);
       signal(SIGTERM, NotificationProducer::signalHandler);
+      signal(SIGHUP, NotificationProducer::signalHandler);
 
       m_notificationHandler = std::make_shared<notificationLib::api>(m_face,
                                                                      notificationLib::api::DEFAULT_NAME,
