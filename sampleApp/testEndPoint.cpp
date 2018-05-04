@@ -142,7 +142,7 @@ namespace ndn {
       for(auto const& iList: notificationList)
       {
         m_allRecievedEvents[iList.first] = iList.second;
-        m_diff.push_back(receivedTime - iList.first);
+        m_diff.push_back((receivedTime - iList.first) /1000);
         m_receivedStream << receivedTime << ", ";
         m_receivedStream << iList.first << ", ";
         m_receivedStream << receivedTime - iList.first << ", ";
@@ -164,8 +164,9 @@ namespace ndn {
 
       if(m_allRecievedEvents.size() != 0)
       {
+        output << "sum (micro): " << sum << std::endl;
         double avg = sum / m_diff.size();
-        output << "Avg latency (ns): " << avg << std::endl;
+        output << "Avg latency (micro): " << avg << std::endl;
       }
       output << "Events sent: ";
       for(auto const& iSent: m_allSentEvents)

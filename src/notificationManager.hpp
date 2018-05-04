@@ -140,6 +140,7 @@ namespace notificationLib
     Name m_outstandingInterestName;
     const ndn::PendingInterestId* m_outstandingInterestId;
     NotificationAPICallback m_onUpdate;
+    std::vector<ConstBufferPtr> m_stateHostory;
 
     // Timer
     time::milliseconds m_notificationInterestLifetime;

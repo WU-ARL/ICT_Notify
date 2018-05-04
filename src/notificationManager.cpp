@@ -63,6 +63,7 @@ NotificationProtocol::sendNotificationInterest()
   interestName.append(state->get<uint8_t>(), state->size());
   //interestName.appendVersion();
   m_outstandingInterestName = interestName;
+  m_stateHostory.push_back(state);
 
   // scheduling the next interest so there is always a
   // long-lived interest packet in the PIT
@@ -106,18 +107,28 @@ NotificationProtocol::onNotificationData(const Interest& interest,
                                                                  data.getName().get(-2).value_size());
 
 
-  // for now, if our state is different then the old one - leave it
+  // if data's old state is no longer our state
+  // it can be our looped back data
+  // or it can be simoultanious update from someone else
   ConstBufferPtr localStateName = m_state.getState();
-  if(*oldStateComponentBuf != *localStateName)
-  {
-    // Maybe not an error, but print out so we know when it happens
-    // can happen on simoultanious updates of me and a another party?
-    _LOG_ERROR("NotificationProtocol::onNotificationData old state is different then ours");
-    return;
-  }
+  // if(*oldStateComponentBuf != *localStateName)
+  // {
+  //   // check if that's the last data we just pushed for our older state
+  //   //if o
+  //   //find (myvector.begin(), myvector.end(), 30);
+  //   // Maybe not an error, but print out so we know when it happens
+  //   // can happen on simoultanious updates of me and a another party?
+  //   _LOG_ERROR("NotificationProtocol::onNotificationData old state is different then ours");
+  //   return;
+  // }
   // reconcile differences
   m_state.reconcile(newStateComponentBuf, notificationData, m_notificationMemoryFreshness);
 
+  ConstBufferPtr localStateNameAfterReconcile = m_state.getState();
+
+  // if no updates
+  if(*localStateNameAfterReconcile == *localStateName)
+    return;
   //  send another interest only after update state with the new info
   if (m_outstandingInterestName == interest.getName()) {
     resetOutstandingInterest();
@@ -269,8 +280,23 @@ NotificationProtocol::sendDiff(const Name& interestName,  const ndn::time::milli
       {
         m_state.erase(lit.first);
       }
+    }
+    bool sent = false;
+    // if remote is not empty and has unexpired info - trigger interest now to get it.
+    for(auto const& rit: inRemote)
+    {
+      if (sent)
+        break;
+      // // if still relevant (convert ms to ns)
+      if(!State::isExpired(now_ns_long_type, rit.first, m_notificationMemoryFreshness))
+      {
+          // enough that one is not expire to trigget an interest
+          //can leave the loop now
+
+      }
 
     }
+
     if(!listToPush.empty())
     {
       if (freshness > ndn::time::milliseconds(0))
@@ -404,10 +430,10 @@ void
 NotificationProtocol::resetOutstandingInterest()
 {
   // remove outstanding interest
-  if (m_outstandingInterestId != 0) {
-    m_face.removePendingInterest(m_outstandingInterestId);
-    m_outstandingInterestId = 0;
-  }
+  // if (m_outstandingInterestId != 0) {
+  //   m_face.removePendingInterest(m_outstandingInterestId);
+  //   m_outstandingInterestId = 0;
+  // }
 
   //reschedule sending new notification interest
   time::milliseconds after(m_reexpressionJitter(m_randomGenerator));

@@ -180,8 +180,15 @@ State::reconcile(ConstBufferPtr newState, NotificationData& data, ndn::time::mil
     // for now, only add new timestamps to local IBF and History
     for(auto const& newit: inNew)
     {
+      _LOG_DEBUG("State::reconcile: found new item: " << newit.first);
       if(!State::isExpired(now_ns_long_type, newit.first, max_freshness))
+      {
+        _LOG_DEBUG("State::reconcile: item is fresh  " << newit.first);
         addTimestamp(newit.first, data.m_eventsObj.getEventList(newit.first));
+      }
+      else
+        _LOG_DEBUG("State::reconcile: item expired  " << newit.first);
+
       //listToPush[lit.first] = m_state.getEventsAtTimestamp(lit.first);
     }
     // TBD - handle removals
