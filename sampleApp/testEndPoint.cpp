@@ -139,10 +139,11 @@ namespace ndn {
     }
     void onNotificationUpdateWithTime (uint64_t receivedTime, const std::unordered_map<uint64_t,std::vector<Name>>& notificationList)
     {
+      //std::cout << "received!!" << std::endl;
       for(auto const& iList: notificationList)
       {
         auto entry = m_allRecievedEvents.find(iList.first);
-        if(entry != m_allRecievedEvents.end())
+        if(entry == m_allRecievedEvents.end())
         {
           m_allRecievedEvents[iList.first] = iList.second;
           m_diff.push_back((receivedTime - iList.first) /1000);
