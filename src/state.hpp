@@ -53,7 +53,7 @@ public:
   std::string dumpItems() const;
 
   std::string dumpHistory() const;
-  std::string dumpHistory(std::map<uint64_t,std::vector<Name>> history) const;
+  std::string dumpHistory(std::unordered_map<uint64_t,std::vector<Name>> history) const;
 
 private:
   std::vector<uint8_t> _pseudoRandomValue(uint64_t n);
@@ -66,8 +66,8 @@ private:
   // history containers
   IBFT m_ibft;
   bool m_isList;
-  std::map<uint64_t,shared_ptr<Data>> m_DataList;
-  std::map<uint64_t,std::vector<Name>> m_NotificationHistory;
+  std::unordered_map<uint64_t,shared_ptr<Data>> m_DataList;
+  std::unordered_map<uint64_t,std::vector<Name>> m_NotificationHistory;
 };
 
 // class Gzip {

@@ -81,7 +81,7 @@ namespace ndn {
       //m_notificationHandler->registerNotificationPrefix(m_eventName);
       sleep (2);
     }
-    void onNotificationUpdateWithTime (uint64_t receivedTime, const std::map<uint64_t,std::vector<Name>>& notificationList)
+    void onNotificationUpdateWithTime (uint64_t receivedTime, const std::unordered_map<uint64_t,std::vector<Name>>& notificationList)
     {
       for(auto const& iList: notificationList)
       {

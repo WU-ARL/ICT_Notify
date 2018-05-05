@@ -137,20 +137,24 @@ namespace ndn {
       ++m_next;
       return event;
     }
-    void onNotificationUpdateWithTime (uint64_t receivedTime, const std::map<uint64_t,std::vector<Name>>& notificationList)
+    void onNotificationUpdateWithTime (uint64_t receivedTime, const std::unordered_map<uint64_t,std::vector<Name>>& notificationList)
     {
       for(auto const& iList: notificationList)
       {
-        m_allRecievedEvents[iList.first] = iList.second;
-        m_diff.push_back((receivedTime - iList.first) /1000);
-        m_receivedStream << receivedTime << ", ";
-        m_receivedStream << iList.first << ", ";
-        m_receivedStream << receivedTime - iList.first << ", ";
-        for (size_t i = 0; i < iList.second.size(); i++)
+        auto entry = m_allRecievedEvents.find(iList.first);
+        if(entry != m_allRecievedEvents.end())
         {
-          m_receivedStream << ", " << iList.second[i];
+          m_allRecievedEvents[iList.first] = iList.second;
+          m_diff.push_back((receivedTime - iList.first) /1000);
+          m_receivedStream << receivedTime << ", ";
+          m_receivedStream << iList.first << ", ";
+          m_receivedStream << receivedTime - iList.first << ", ";
+          for (size_t i = 0; i < iList.second.size(); i++)
+          {
+            m_receivedStream << ", " << iList.second[i];
+          }
+          m_receivedStream << std::endl;
         }
-        m_receivedStream << std::endl;
       }
     }
     void Log()
@@ -251,7 +255,7 @@ namespace ndn {
     ndn::EventId m_sentEventId;
     std::vector<Name> m_allSentEvents;
     std::vector<uint64_t> m_diff;
-    std::map<uint64_t,std::vector<Name>> m_allRecievedEvents;
+    std::unordered_map<uint64_t,std::vector<Name>> m_allRecievedEvents;
     std::mt19937 m_randomGenerator;
     std::uniform_int_distribution<> m_eventNameDist;
     std::uniform_int_distribution<> m_eventSchedDist;

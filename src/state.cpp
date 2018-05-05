@@ -266,7 +266,7 @@ std::string State::dumpHistory() const
   return dumpHistory(m_NotificationHistory);
 }
 
-std::string State::dumpHistory(std::map<uint64_t,std::vector<Name>> history) const
+std::string State::dumpHistory(std::unordered_map<uint64_t,std::vector<Name>> history) const
 {
   std::ostringstream result;
   result << "items in History:\n";

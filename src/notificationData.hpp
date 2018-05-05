@@ -72,11 +72,11 @@ namespace notificationLib
       {
         size_t totalLength = 0;
 
-        for (std::map<uint64_t,shared_ptr<Data>>::const_reverse_iterator i = m_dataList.rbegin();
-             i != m_dataList.rend(); ++i) {
+        for (auto i: m_dataList)
+        {
           size_t entryLength = 0;
-          entryLength += prependNonNegativeIntegerBlock(encoder, tlv::Timestamp, i->first);
-          entryLength += i->second->wireEncode(encoder);
+          entryLength += prependNonNegativeIntegerBlock(encoder, tlv::Timestamp, i.first);
+          entryLength += i.second->wireEncode(encoder);
           entryLength += encoder.prependVarNumber(totalLength);
           entryLength += encoder.prependVarNumber(tlv::DataEntry);
           totalLength += entryLength;
@@ -137,7 +137,7 @@ namespace notificationLib
       }
     private:
       // list of events if this is of type DataList
-      std::map<uint64_t,shared_ptr<Data>> m_dataList;
+      std::unordered_map<uint64_t,shared_ptr<Data>> m_dataList;
     }; //end class NotificationDataList
 
     class NotificationEventsList
@@ -162,7 +162,7 @@ namespace notificationLib
       //   m_eventsList.push_back(name);
       // }
       void
-      set(std::map<uint64_t,std::vector<Name>>& notificationList)
+      set(std::unordered_map<uint64_t,std::vector<Name>>& notificationList)
       {
         //m_eventsList.insert(m_eventsList.end(),nameList.begin(), nameList.begin());
         m_eventsListPerTimestamp = notificationList;
@@ -178,7 +178,7 @@ namespace notificationLib
       {
         return m_eventsListPerTimestamp[timestampKey];
       }
-      std::map<uint64_t,std::vector<Name>>&
+      std::unordered_map<uint64_t,std::vector<Name>>&
       getEventList()
       {
         return m_eventsListPerTimestamp;
@@ -189,16 +189,15 @@ namespace notificationLib
       wireEncode(EncodingImpl<T>& encoder) const
       {
         size_t totalLength = 0;
-        // go over the map
-        for (std::map<uint64_t,std::vector<Name>>::const_reverse_iterator i = m_eventsListPerTimestamp.rbegin();
-             i != m_eventsListPerTimestamp.rend(); ++i)
+        // go over the unordered_map
+        for (auto i: m_eventsListPerTimestamp)
         {
           size_t entryLength = 0;
 
-          entryLength += prependNonNegativeIntegerBlock(encoder, tlv::Timestamp, i->first);
+          entryLength += prependNonNegativeIntegerBlock(encoder, tlv::Timestamp, i.first);
 
           // encode the list of events for timestamp
-          const std::vector<Name>& events = i->second;
+          const std::vector<Name>& events = i.second;
           for (std::vector<Name>::const_reverse_iterator iName = events.rbegin();
                iName != events.rend(); ++iName)
           {
@@ -289,7 +288,7 @@ namespace notificationLib
       }
     private:
       // list of events per timestamp if this is of type EventList
-      std::map<uint64_t,std::vector<Name>> m_eventsListPerTimestamp;
+      std::unordered_map<uint64_t,std::vector<Name>> m_eventsListPerTimestamp;
 
     }; // end class NotificationEventsList
 
@@ -298,7 +297,7 @@ namespace notificationLib
     {
       m_type = dataType::Unknown;
     };
-    NotificationData(std::map<uint64_t,std::vector<Name>>& notificationList)
+    NotificationData(std::unordered_map<uint64_t,std::vector<Name>>& notificationList)
     {
       m_type = dataType::EventsContainer;
       m_eventsObj.set(notificationList);

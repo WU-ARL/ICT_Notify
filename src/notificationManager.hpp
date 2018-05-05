@@ -103,7 +103,7 @@ namespace notificationLib
 
     void
     pushNotificationData(const Name& dataName,
-                          std::map<uint64_t,std::vector<Name>>& notificationList,
+                          std::unordered_map<uint64_t,std::vector<Name>>& notificationList,
                           const ndn::time::milliseconds& freshness);
     // void
     // pushNotificationData(const Name& dataName,

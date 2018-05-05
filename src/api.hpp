@@ -45,8 +45,8 @@ public:
   // using DataValidationErrorCallback = function<void(const Data&, const ValidationError& error)> ;
 
   // for collecting
-  static std::map<uint64_t,int> m_DataNameSizeCollector;
-  static std::map<uint64_t,int> m_InterestNameSizeCollector;
+  static std::unordered_map<uint64_t,int> m_DataNameSizeCollector;
+  static std::unordered_map<uint64_t,int> m_InterestNameSizeCollector;
 
   static void
   collectNameSize(int type, uint32_t number); // type: 1-interest, 2- Data
@@ -56,7 +56,7 @@ private:
 
   void
   onNotificationUpdate (const Name& notificationName,
-                        const std::map<uint64_t,std::vector<Name>>& notificationList);
+                        const std::unordered_map<uint64_t,std::vector<Name>>& notificationList);
 
   void
   loadConfigurationFile(std::istream& input, const std::string& filename);
@@ -85,7 +85,7 @@ private:
   ndn::KeyChain m_keyChain;
   std::shared_ptr<Validator> m_validator;
 
-  //std::unordered_map<ndn::Name, const ndn::RegisteredPrefixId*> m_registeteredEventsList;
+  //std::unordered_unordered_map<ndn::Name, const ndn::RegisteredPrefixId*> m_registeteredEventsList;
   //ndn::InMemoryStoragePersistent m_inMemoryStorage;
 };
 

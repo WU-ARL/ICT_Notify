@@ -97,7 +97,7 @@ namespace ndn {
         //m_notificationHandler->registerNotificationPrefix(m_name);
 
     }
-    void onNotificationUpdateWithTime (uint64_t receivedTime, const std::map<uint64_t,std::vector<Name>>& notificationList)
+    void onNotificationUpdateWithTime (uint64_t receivedTime, const std::unordered_map<uint64_t,std::vector<Name>>& notificationList)
     {
       for (size_t i = 0; i < notificationList.size(); i++) {
           //std::cout << " application received notification: " << nameList[i] << std::endl;

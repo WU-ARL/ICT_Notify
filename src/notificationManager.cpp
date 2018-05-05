@@ -259,7 +259,7 @@ NotificationProtocol::sendDiff(const Name& interestName,  const ndn::time::milli
   {
     _LOG_DEBUG("NotificationProtocol::satisfyPendingNotificationInterests: list size is:" << inLocal.size());
 
-    std::map<uint64_t,std::vector<Name>> listToPush;
+    std::unordered_map<uint64_t,std::vector<Name>> listToPush;
     // send all new data (ignore removals for now. TBD)
     for(auto const& lit: inLocal)
     {
@@ -312,7 +312,7 @@ NotificationProtocol::sendDiff(const Name& interestName,  const ndn::time::milli
 }
 void
 NotificationProtocol::pushNotificationData(const Name& dataName,
-                                          std::map<uint64_t,std::vector<Name>>& notificationList,
+                                          std::unordered_map<uint64_t,std::vector<Name>>& notificationList,
                                           const ndn::time::milliseconds& freshness)
 {
   _LOG_DEBUG("NotificationProtocol::pushNotificationData named: " << dataName );

@@ -18,8 +18,8 @@ const std::shared_ptr<Validator> api::DEFAULT_VALIDATOR;
 const time::milliseconds api::DEFAULT_EVENT_INTEREST_LIFETIME(5000);
 const time::milliseconds api::DEFAULT_EVENT_FRESHNESS(4);
 
-std::map<uint64_t,int> api::m_DataNameSizeCollector;
-std::map<uint64_t,int> api::m_InterestNameSizeCollector;
+std::unordered_map<uint64_t,int> api::m_DataNameSizeCollector;
+std::unordered_map<uint64_t,int> api::m_InterestNameSizeCollector;
 
 api::api(ndn::Face& face,
          const Name& signingId,
@@ -172,10 +172,10 @@ api::notify(const Name& notificationName,
 }
 
 void api::onNotificationUpdate (const Name& notificationName,
-                                const std::map<uint64_t,std::vector<Name>>& notificationList)
+                                const std::unordered_map<uint64_t,std::vector<Name>>& notificationList)
 {
   _LOG_DEBUG("api::onNotificationUpdate");
-  std::map<uint64_t,std::vector<Name>> matchedNotifications;
+  std::unordered_map<uint64_t,std::vector<Name>> matchedNotifications;
 
   auto now_ns = boost::chrono::time_point_cast<boost::chrono::nanoseconds>(ndn::time::system_clock::now());
   auto now_ns_long_type = (now_ns.time_since_epoch()).count();
