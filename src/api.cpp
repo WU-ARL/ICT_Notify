@@ -15,7 +15,7 @@ const ndn::Name api::EMPTY_NAME;
 const ndn::Name api::DEFAULT_NAME;
 //const NotificationData api::EMPTY_EVENT_LIST;
 const std::shared_ptr<Validator> api::DEFAULT_VALIDATOR;
-const time::milliseconds api::DEFAULT_EVENT_INTEREST_LIFETIME(5000);
+const time::milliseconds api::DEFAULT_EVENT_INTEREST_LIFETIME(3000);
 const time::milliseconds api::DEFAULT_EVENT_FRESHNESS(4);
 
 std::unordered_map<uint64_t,int> api::m_DataNameSizeCollector;

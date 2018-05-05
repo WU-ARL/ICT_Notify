@@ -99,7 +99,7 @@ NotificationProtocol::onNotificationData(const Interest& interest,
   // TBD: validate data
 
   // Remove satisfied interest from PIT
-  m_interestTable.erase(interest.getName());
+  //m_interestTable.erase(interest.getName());
 
   ConstBufferPtr newStateComponentBuf = make_shared<ndn::Buffer>(data.getName().get(-1).value(),
                                                                  data.getName().get(-1).value_size());
