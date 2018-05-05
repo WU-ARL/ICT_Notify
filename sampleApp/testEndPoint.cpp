@@ -32,7 +32,7 @@ namespace ndn {
     : m_programName(programName)
     , m_randomGenerator(std::random_device{}())
     , m_eventNameDist(100,10000)
-    , m_eventSchedDist(1,5)
+    , m_eventSchedDist(2,5)
     , m_eventsCounter(0)
     , m_scheduler(m_face.getIoService())
     , m_totalEventsToSend(0)
