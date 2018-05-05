@@ -121,6 +121,9 @@ NotificationProtocol::onNotificationData(const Interest& interest,
   //   _LOG_ERROR("NotificationProtocol::onNotificationData old state is different then ours");
   //   return;
   // }
+
+  notificationData.wireDecode(data.getContent().blockFromValue());
+
   // reconcile differences
   m_state.reconcile(newStateComponentBuf, notificationData, m_notificationMemoryFreshness);
 
@@ -133,8 +136,6 @@ NotificationProtocol::onNotificationData(const Interest& interest,
   if (m_outstandingInterestName == interest.getName()) {
     resetOutstandingInterest();
   }
-
-  notificationData.wireDecode(data.getContent().blockFromValue());
 
   if(notificationData.m_type == NotificationData::dataType::EventsContainer)
   {
