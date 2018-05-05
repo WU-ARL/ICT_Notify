@@ -204,7 +204,7 @@ NotificationProtocol::satisfyPendingNotificationInterests(const std::vector<Name
 {
   Name notificationInterestName(m_notificationName);
 
-  _LOG_DEBUG("NotificationProtocol::satisfyPendingEventInterests: "
+  _LOG_DEBUG("NotificationProtocol::satisfyPendingNotificationInterests: "
              << "notificationPrefix is: " << notificationInterestName);
 
   if (eventList.empty())
@@ -257,7 +257,7 @@ NotificationProtocol::sendDiff(const Name& interestName,  const ndn::time::milli
   // compute the set-difference
   if (m_state.getDiff(rmtStatus, inLocal, inRemote))
   {
-    _LOG_DEBUG("NotificationProtocol::satisfyPendingNotificationInterests: list size is:" << inLocal.size());
+    _LOG_DEBUG("NotificationProtocol::sendDiff: list size is:" << inLocal.size());
 
     std::unordered_map<uint64_t,std::vector<Name>> listToPush;
     // send all new data (ignore removals for now. TBD)
@@ -271,8 +271,7 @@ NotificationProtocol::sendDiff(const Name& interestName,  const ndn::time::milli
       if(!State::isExpired(now_ns_long_type, lit.first, m_notificationMemoryFreshness))
       {
         std::vector<Name>& eventList = m_state.getEventsAtTimestamp(lit.first);
-        // TBD: for now -  send empty lists to maintain the same state
-        // need to fix after handling removals
+
         if(!eventList.empty())
           listToPush[lit.first] = eventList;
       }

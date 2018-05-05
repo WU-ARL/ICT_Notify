@@ -192,11 +192,17 @@ void api::onNotificationUpdate (const Name& notificationName,
   for(auto const& iList: notificationList)
   {
     const uint64_t timestamp = iList.first;
+
+    _LOG_DEBUG("api::onNotificationUpdate checking events for timestamp: " << timestamp);
     const std::vector<Name>& eventsAtTimestamp = iList.second;
     std::vector<Name> matchedNames;
 
-    for (size_t i = 0; i < eventsAtTimestamp.size(); i++) {
+    for (size_t i = 0; i < eventsAtTimestamp.size(); i++)
+    {
       Name eventName = eventsAtTimestamp[i];
+
+      _LOG_DEBUG("api::onNotificationUpdate checking event name: " << eventName);
+
       auto it = std::find_if(eventList.begin(), eventList.end(),
                             [&eventName](const unique_ptr<Event>& event)
                             {return (event->match(eventName));});
