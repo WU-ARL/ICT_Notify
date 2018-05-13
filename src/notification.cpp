@@ -68,7 +68,7 @@ Notification::create(const ConfigSection& configSection,
   size_t memoryFreshness = std::stoi(propertyIt->second.data()) *1000;
   propertyIt++;
 
-  // Get notification.isProvider
+  // Get notification.isListener
   bool isListener = false;
   if (propertyIt == configSection.end() || !boost::iequals(propertyIt->first, "isListener")) {
     BOOST_THROW_EXCEPTION(Error("Expecting <notification.isListener>"));
@@ -115,10 +115,10 @@ Notification::create(const ConfigSection& configSection,
     propertyIt++;
   }
 
-  // Check other stuff
-  if (propertyIt != configSection.end()) {
-    BOOST_THROW_EXCEPTION(Error("Expecting the end of notification, instead got " + propertyIt->first));
-  }
+  // // Check other stuff
+  // if (propertyIt != configSection.end()) {
+  //   BOOST_THROW_EXCEPTION(Error("Expecting the end of notification, instead got " + propertyIt->first));
+  // }
 
   return notification;
 }

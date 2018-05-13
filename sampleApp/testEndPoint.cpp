@@ -40,7 +40,7 @@ namespace ndn {
       m_receivedStream << "Recieved At: \t\t " << "Sent At: \t "
                        << "diff (ns)   " << "Names" << std::endl;
 
-
+      m_eventRate = 0;
       m_next = 0;
     }
 
@@ -49,7 +49,7 @@ namespace ndn {
     {
       std::cout << "\n Usage:\n " << m_programName <<
       ""
-      " [-h] -f filters_file  -n events_number -i id -l log_name [-p publisher][-d debug_mode]\n"
+      " [-h] -f filters_file  -n events_number -i id -l log_name [-r rate] [-p publisher][-d debug_mode]\n"
       " Register and push event notifications.\n"
       "\n"
       " \t-h - print this message and exit\n"
@@ -57,6 +57,7 @@ namespace ndn {
       " \t-n - total number of events to send \n"
       " \t-i - id to set in event \n"
       " \t-l - log file name \n"
+      " \t-r - optional event rate. If none send in uniform distribution 2-5 seconds \n"
       " \t-d - sets the debug mode, 1 - debug on, 0 - debug off (default)\n"
       "\n";
       exit(1);
@@ -75,9 +76,13 @@ namespace ndn {
       //m_allSentEvents.reserve(m_totalEventsToSend);
 
       if(PUBLISHER)
+      {
+        // schedule the first event in 4 second
         m_sentEventId =
-          m_scheduler.scheduleEvent(ndn::time::seconds(m_eventSchedDist(m_randomGenerator)),
+          m_scheduler.scheduleEvent(ndn::time::seconds(4),
                                     bind(&NotificationProducer::sendEvent,this));
+
+      }
 
       while (true)
       {
@@ -202,6 +207,10 @@ namespace ndn {
     {
       m_totalEventsToSend = num;
     }
+    void setEventsRate(int rate)
+    {
+      m_eventRate = rate;
+    }
     void setLogFileName(std::string fileName)
     {
       m_logFile = fileName;
@@ -226,10 +235,21 @@ namespace ndn {
 
         m_notificationHandler->notify("/wustl/test/service", eventList);
 
-        // schedule the next sending
-        m_sentEventId =
-          m_scheduler.scheduleEvent(ndn::time::seconds(m_eventSchedDist(m_randomGenerator)),
-                                    bind(&NotificationProducer::sendEvent,this));
+        if(!m_eventRate)
+        {
+          // schedule the next sending
+          m_sentEventId =
+            m_scheduler.scheduleEvent(ndn::time::seconds(m_eventSchedDist(m_randomGenerator)),
+                                      bind(&NotificationProducer::sendEvent,this));
+        }
+        else
+        {
+          // schedule the next sending
+          m_sentEventId =
+            m_scheduler.scheduleEvent(ndn::time::seconds(m_eventRate),
+                                      bind(&NotificationProducer::sendEvent,this));
+        }
+
       }
 
     }
@@ -260,6 +280,7 @@ namespace ndn {
     std::mt19937 m_randomGenerator;
     std::uniform_int_distribution<> m_eventNameDist;
     std::uniform_int_distribution<> m_eventSchedDist;
+    int m_eventRate;
     std::string m_logFile;
     //std::ostringstream m_receivedStream;
     std::stringstream m_receivedStream;
@@ -280,7 +301,7 @@ main(int argc, char* argv[])
   bool LogSet = false;
   bool idSet = false;
 
-  while ((option = getopt(argc, argv, "hf:n:l:i:pd:")) != -1)
+  while ((option = getopt(argc, argv, "hf:n:l:i:r:pd:")) != -1)
   {
     switch (option)
     {
@@ -301,6 +322,10 @@ main(int argc, char* argv[])
       case 'i':
         producer.setId(optarg);
         idSet = true;
+        break;
+      case 'r':
+        producer.setEventsRate(atoi(optarg));
+        std::cout << "set events rate to " << optarg << std::endl;
         break;
       case 'd':
         DEBUG = atoi(optarg);
