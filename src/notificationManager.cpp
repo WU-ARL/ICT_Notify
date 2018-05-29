@@ -11,11 +11,11 @@ NotificationProtocol::NotificationProtocol(ndn::Face& face,
                                            const Name& notificationName,
                                            size_t maxNotificationMemory,
                                            const time::milliseconds& notificationMemoryFreshness,
+                                           const time::milliseconds& notificationInterestLifetime,
                                            bool isList,
                                            const NotificationAPICallback& onUpdate,
                                            const Name& defaultSigningId,
                                            std::shared_ptr<Validator> validator,
-                                           const time::milliseconds& notificationInterestLifetime,
                                            const time::milliseconds& notificationReplyFreshness)
   : m_face(face)
   , m_notificationName(notificationName)

@@ -18,6 +18,7 @@ public:
   Notification(const Name& name,
                size_t maxNotificationMemory,
                const time::milliseconds memoryFreshness,
+               const time::milliseconds lifetime,
                bool isListener,
                bool isProvider,
                bool isList,

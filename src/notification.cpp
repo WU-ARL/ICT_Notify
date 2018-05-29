@@ -9,6 +9,7 @@ namespace notificationLib {
 Notification::Notification(const Name& name,
                           size_t maxNotificationMemory,
                           time::milliseconds memoryFreshness,
+                          time::milliseconds lifetime,
                           bool isListener,
                           bool isProvider,
                           bool isList,
@@ -22,11 +23,11 @@ Notification::Notification(const Name& name,
                            name,
                            maxNotificationMemory,
                            memoryFreshness,
+                           lifetime,
                            isList,
                            notificationCB,
                            api::DEFAULT_NAME,
                            api::DEFAULT_VALIDATOR,
-                           api::DEFAULT_EVENT_INTEREST_LIFETIME,
                            api::DEFAULT_EVENT_FRESHNESS)
 {
 }
@@ -64,9 +65,18 @@ Notification::create(const ConfigSection& configSection,
   if (propertyIt == configSection.end() || !boost::iequals(propertyIt->first, "memoryFreshness")) {
     BOOST_THROW_EXCEPTION(Error("Expecting <notification.memoryFreshness>"));
   }
-  // converting seconds to ms.
+  // converting number to ms.
   size_t memoryFreshness = std::stoi(propertyIt->second.data()) *1000;
   propertyIt++;
+
+  // Get notification.lifetime
+  if (propertyIt == configSection.end() || !boost::iequals(propertyIt->first, "lifetime")) {
+    BOOST_THROW_EXCEPTION(Error("Expecting <notification.lifetime>"));
+  }
+  // converting number to ms.
+  size_t lifetime = std::stoi(propertyIt->second.data()) *1000;
+  propertyIt++;
+
 
   // Get notification.isListener
   bool isListener = false;
@@ -101,8 +111,15 @@ Notification::create(const ConfigSection& configSection,
     isList = true;
   propertyIt++;
 
-  auto notification = make_unique<Notification>(name, maxNotificationMemory, time::milliseconds(memoryFreshness),
-                                                isListener, isProvider, isList, face, notificationCB);
+  auto notification = make_unique<Notification>(name,
+                                                maxNotificationMemory,
+                                                time::milliseconds(memoryFreshness),
+                                                time::milliseconds(lifetime),
+                                                isListener,
+                                                isProvider,
+                                                isList,
+                                                face,
+                                                notificationCB);
 
   if (isListener)
   {

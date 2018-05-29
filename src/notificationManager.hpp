@@ -40,12 +40,12 @@ namespace notificationLib
                          const Name& notificationName,
                          size_t maxNotificationMemory,
                          const time::milliseconds& notificationMemoryFreshness,
+                         const time::milliseconds& eventInterestLifetime,
                          bool isList,
                          //const Name& notificationPrefix,
                          const NotificationAPICallback& onUpdate,
                          const Name& defaultSigningId,
                          std::shared_ptr<Validator> validator,
-                         const time::milliseconds& eventInterestLifetime,
                          const time::milliseconds& eventReplyFreshness);
     ~NotificationProtocol();
 
