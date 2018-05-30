@@ -22,6 +22,7 @@
 // global variable to support debug
 int DEBUG = 0;
 int PUBLISHER = 0;
+int DEFAULT_BLOCKING_TIME = 1000;
 
 namespace ndn {
   class NotificationProducer
@@ -42,6 +43,7 @@ namespace ndn {
 
       m_eventRate = 0;
       m_next = 0;
+      m_blockTime = DEFAULT_BLOCKING_TIME;
     }
 
     void
@@ -49,7 +51,7 @@ namespace ndn {
     {
       std::cout << "\n Usage:\n " << m_programName <<
       ""
-      " [-h] -f filters_file  -n events_number -i id -l log_name [-r rate] [-p publisher][-d debug_mode]\n"
+      " [-h] -f filters_file  -n events_number -i id -l log_name [-r rate] [-b block_time][-p publisher][-d debug_mode]\n"
       " Register and push event notifications.\n"
       "\n"
       " \t-h - print this message and exit\n"
@@ -58,6 +60,7 @@ namespace ndn {
       " \t-i - id to set in event \n"
       " \t-l - log file name \n"
       " \t-r - optional event rate. If none send in uniform distribution 2-5 seconds \n"
+      " \t-r - optional blocking time. Default 100ms \n"
       " \t-d - sets the debug mode, 1 - debug on, 0 - debug off (default)\n"
       "\n";
       exit(1);
@@ -96,7 +99,7 @@ namespace ndn {
         //   exit;
         // }
 
-        m_face.processEvents(time::seconds(1));
+        m_face.processEvents(time::milliseconds(m_blockTime));
       }
     }
     void init()
@@ -211,6 +214,10 @@ namespace ndn {
     {
       m_eventRate = rate;
     }
+    void setBlockingTime(int blockTime)
+    {
+      m_blockTime = blockTime;
+    }
     void setLogFileName(std::string fileName)
     {
       m_logFile = fileName;
@@ -281,6 +288,7 @@ namespace ndn {
     std::uniform_int_distribution<> m_eventNameDist;
     std::uniform_int_distribution<> m_eventSchedDist;
     int m_eventRate;
+    int m_blockTime;
     std::string m_logFile;
     //std::ostringstream m_receivedStream;
     std::stringstream m_receivedStream;
@@ -301,7 +309,7 @@ main(int argc, char* argv[])
   bool LogSet = false;
   bool idSet = false;
 
-  while ((option = getopt(argc, argv, "hf:n:l:i:r:pd:")) != -1)
+  while ((option = getopt(argc, argv, "hf:n:l:i:r:b:pd:")) != -1)
   {
     switch (option)
     {
@@ -326,6 +334,10 @@ main(int argc, char* argv[])
       case 'r':
         producer.setEventsRate(atoi(optarg));
         std::cout << "set events rate to " << optarg << std::endl;
+        break;
+      case 'b':
+        producer.setBlockingTime(atoi(optarg));
+        std::cout << "set blocking time(ms) to  " << optarg << std::endl;
         break;
       case 'd':
         DEBUG = atoi(optarg);
