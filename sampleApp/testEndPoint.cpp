@@ -173,6 +173,9 @@ namespace ndn {
       output << "Total received: " << m_allRecievedEvents.size() << std::endl;
       output << "Total in diff: " << m_diff.size() << std::endl;
 
+      std::nth_element(m_diff.begin(), m_diff.begin() + m_diff.size()/2, m_diff.end());
+      output << "The median is (micro) " << m_diff[m_diff.size()/2] << std::endl;
+
       uint64_t sum = std::accumulate(m_diff.begin(), m_diff.end(), 0);
 
       if(m_allRecievedEvents.size() != 0)
