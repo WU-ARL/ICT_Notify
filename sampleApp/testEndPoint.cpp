@@ -62,7 +62,7 @@ namespace ndn {
     {
       std::cout << "\n Usage:\n " << m_programName <<
       ""
-      " [-h] -f filters_file  -n events_number -i id -l log_name [-r rate] [-b block_time][-p publisher][-s pipe][-d debug_mode]\n"
+      " [-h] -f filters_file  -n events_number -i id -l log_name [-r rate] [-b block_time][-p publisherDate][-s pipe][-d debug_mode]\n"
       " Register and push event notifications.\n"
       "\n"
       " \t-h - print this message and exit\n"
@@ -72,7 +72,7 @@ namespace ndn {
       " \t-l - log file name \n"
       " \t-r - optional event rate. If none send in uniform distribution 2-5 seconds \n"
       " \t-b - optional blocking time. Default 100ms \n"
-      " \t-p - optional isPublisher. Default false \n"
+      " \t-p - optional isPublisher. Default none. If publisher then need to provide publisherDate file \n"
       " \t-s - optional pipe name \n"
       " \t-d - sets the debug mode, 1 - debug on, 0 - debug off (default)\n"
       "\n";
@@ -193,7 +193,7 @@ namespace ndn {
     initPublisherData()
     {
       std::cout << "init publisher" << std::endl;
-      std::ifstream fs("publisherData.txt");
+      std::ifstream fs(m_publishersFile);
       std::string line;
       std::string idToFind(m_id);
 
@@ -225,7 +225,7 @@ namespace ndn {
       }
       if (DEBUG)
       {
-        std::cout << "finished reading publisherData.txt" << std::endl;
+        std::cout << "finished reading " << m_publishersFile << std::endl;
       }
     }
 
@@ -342,6 +342,10 @@ namespace ndn {
     {
       m_id = id;
     }
+    void setPublisherFile(std::string publisherFileName)
+    {
+      m_publishersFile = publisherFileName;
+    }
 
     void sendEvent()
     {
@@ -416,6 +420,7 @@ namespace ndn {
     int m_step_size_x;
     int m_step_size_y;
     std::string m_id;
+    std::string m_publishersFile;
     int m_fd;
 
   };
@@ -432,7 +437,7 @@ main(int argc, char* argv[])
   bool LogSet = false;
   bool idSet = false;
 
-  while ((option = getopt(argc, argv, "hf:n:l:i:r:b:s:pd:")) != -1)
+  while ((option = getopt(argc, argv, "hf:n:l:i:r:b:s:p:d:")) != -1)
   {
     switch (option)
     {
@@ -467,6 +472,8 @@ main(int argc, char* argv[])
         break;
       case 'p':
         PUBLISHER = 1;
+        std::cout << optarg << std::endl;
+        producer.setPublisherFile(optarg);
         break;
       case 's':
         producer.setPipeName(optarg);
