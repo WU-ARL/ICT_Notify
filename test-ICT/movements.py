@@ -9,7 +9,7 @@ from time import sleep
 from Tkinter import *
 
 class Socket:
-    def __init__(self, path = "/tmp/test.fifo", buffer_size = 100):
+    def __init__(self, path = "/tmp/test.fifo", buffer_size = 1000):
         self.buffer_size = buffer_size
         try:
             os.mkfifo(path, 0777)
