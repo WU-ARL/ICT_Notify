@@ -97,7 +97,7 @@ namespace notificationLib
     // pushNotificationData(const Name& dataName,
     //                      const std::vector<Name>& eventList,
     //                      const ndn::time::milliseconds& freshness);
-    void
+    int
     sendDiff(const Name& interestName,
              const ndn::time::milliseconds freshness = ndn::time::milliseconds(-1));
 

@@ -178,7 +178,7 @@ NotificationProtocol::registerNotificationFilter(const Name& notificationNameFil
 void
 NotificationProtocol::onNotificationInterest(const Name& name, const Interest& interest)
 {
-  _LOG_DEBUG("NotificationProtocol::onNotificationInterest insert interest: "
+  _LOG_DEBUG("NotificationProtocol::onNotificationInterest: "
              << interest);
 
   ConstBufferPtr interestState = make_shared<ndn::Buffer>(interest.getName().get(-1).value(),
@@ -186,16 +186,21 @@ NotificationProtocol::onNotificationInterest(const Name& name, const Interest& i
 
   ConstBufferPtr localState = m_state.getState();
 
-  if(*interestState == *localState)
-  {
-    //same state, save interest in interest table for future processing
-    // Insert full name Interest with notification name
-    m_interestTable.insert(interest, name);
-  }
-  else
+  int nPushedItems = 0;
+  if(*interestState != *localState)
   {
     // if data is ready then push it now.
-    sendDiff(interest.getName());
+    nPushedItems = sendDiff(interest.getName());
+  }
+  if(*interestState == *localState || nPushedItems == 0)
+  {
+    //same state or different state, but nothing was pushed.
+    // This can happen if received interest contains old timestamps
+    // ==> save interest in interest table for future processing
+    // Insert full name Interest with notification name
+    _LOG_DEBUG("NotificationProtocol::onNotificationInterest: "
+               << "no items to push, saving Interest ");
+    m_interestTable.insert(interest, name);
   }
 }
 
@@ -216,16 +221,20 @@ NotificationProtocol::satisfyPendingNotificationInterests(const std::vector<Name
   // first, create new key timestamp for the pushed events
   uint64_t newTimestampKey = m_state.update(eventList);
 
-  _LOG_DEBUG("NotificationProtocol::satisfyPendingNotificationInterests:" << newTimestampKey);
+  _LOG_INFO("NotificationProtocol::satisfyPendingNotificationInterests: new timestamp key" << newTimestampKey);
 
   try {
+    if(m_interestTable.begin() == m_interestTable.end())
+    {
+      _LOG_INFO("NotificationProtocol::satisfyPendingNotificationInterests: InterestTable is empty. Can't push data");
+    }
     // Go over all recorded requests and compute the set-difference
     // if can respond, reply with missing data
     auto it = m_interestTable.begin();
     while (it != m_interestTable.end()) {
       ConstUnsatisfiedInterestPtr request = *it;
       ++it;
-      sendDiff(request->interest.getName());
+      int nPushedItems = sendDiff(request->interest.getName());
     }
     m_interestTable.clear();
   }
@@ -233,7 +242,7 @@ NotificationProtocol::satisfyPendingNotificationInterests(const std::vector<Name
     // ok. not really an error
   }
 }
-void
+int
 NotificationProtocol::sendDiff(const Name& interestName,  const ndn::time::milliseconds freshness /*= ndn::time::milliseconds(-1));*/)
 {
   _LOG_DEBUG("NotificationProtocol::sendDiff: Start");
@@ -258,7 +267,7 @@ NotificationProtocol::sendDiff(const Name& interestName,  const ndn::time::milli
   // compute the set-difference
   if (m_state.getDiff(rmtStatus, inLocal, inRemote))
   {
-    _LOG_DEBUG("NotificationProtocol::sendDiff: list size is:" << inLocal.size());
+    _LOG_DEBUG("NotificationProtocol::sendDiff: list size in local is:" << inLocal.size());
 
     std::unordered_map<uint64_t,std::vector<Name>> listToPush;
     // send all new data (ignore removals for now. TBD)
@@ -283,6 +292,7 @@ NotificationProtocol::sendDiff(const Name& interestName,  const ndn::time::milli
     }
     bool sent = false;
     // if remote is not empty and has unexpired info - trigger interest now to get it.
+    _LOG_DEBUG("NotificationProtocol::sendDiff: list size in remote is:" << inLocal.size());
     for(auto const& rit: inRemote)
     {
       if (sent)
@@ -292,7 +302,7 @@ NotificationProtocol::sendDiff(const Name& interestName,  const ndn::time::milli
       {
           // enough that one is not expire to trigget an interest
           //can leave the loop now
-
+          // TBD_hila: send interest and mark sent as true
       }
 
     }
@@ -305,10 +315,9 @@ NotificationProtocol::sendDiff(const Name& interestName,  const ndn::time::milli
         pushNotificationData(fullDataName, listToPush, m_notificationMemoryFreshness);
     }
 
-
-    // for now - ignore items we don't know in inRemote
-    // TBD: don't think we should remove here, only when recieving data
+      return (listToPush.size());
   }
+  return 0;
 }
 void
 NotificationProtocol::pushNotificationData(const Name& dataName,
