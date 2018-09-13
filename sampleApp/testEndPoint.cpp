@@ -199,6 +199,10 @@ namespace ndn {
 
       while(std::getline(fs, line))
       {
+        if (DEBUG)
+        {
+          std::cout << "read line: " << line << std::endl;
+        }
         std::vector<std::string> publisherData;
         boost::split(publisherData, line, [](char c){return c == ',';});
         // line found
@@ -218,6 +222,10 @@ namespace ndn {
            std::cout << "y step Size: " << publisherData[4] << std::endl;
           }
         }
+      }
+      if (DEBUG)
+      {
+        std::cout << "finished reading publisherData.txt" << std::endl;
       }
     }
 
