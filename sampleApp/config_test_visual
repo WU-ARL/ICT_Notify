@@ -1,0 +1,14 @@
+notification
+{
+	name /wustl/test/service
+	maxMemorySize 50
+	memoryFreshness 7
+	lifetime 1
+	isListener true
+	isProvider true
+	isList true
+	event
+	{
+		
+	}
+}

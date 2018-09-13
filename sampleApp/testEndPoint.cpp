@@ -16,6 +16,12 @@
 #include <iostream>
 #include <fstream>
 #include <csignal>
+#include <fcntl.h>
+#include <iostream>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+//#include <boost/python.hpp>
 
 //#include <notificationLib/api.hpp>
 #include <../src/api.hpp>
@@ -43,7 +49,12 @@ namespace ndn {
 
       m_eventRate = 0;
       m_next = 0;
+      m_next_x = 0;
+      m_next_y = 0;
+      m_step_size_x = 0;
+      m_step_size_y = 0;
       m_blockTime = DEFAULT_BLOCKING_TIME;
+      m_pipeName.clear();
     }
 
     void
@@ -51,7 +62,7 @@ namespace ndn {
     {
       std::cout << "\n Usage:\n " << m_programName <<
       ""
-      " [-h] -f filters_file  -n events_number -i id -l log_name [-r rate] [-b block_time][-p publisher][-d debug_mode]\n"
+      " [-h] -f filters_file  -n events_number -i id -l log_name [-r rate] [-b block_time][-p publisher][-s pipe][-d debug_mode]\n"
       " Register and push event notifications.\n"
       "\n"
       " \t-h - print this message and exit\n"
@@ -60,7 +71,9 @@ namespace ndn {
       " \t-i - id to set in event \n"
       " \t-l - log file name \n"
       " \t-r - optional event rate. If none send in uniform distribution 2-5 seconds \n"
-      " \t-r - optional blocking time. Default 100ms \n"
+      " \t-b - optional blocking time. Default 100ms \n"
+      " \t-p - optional isPublisher. Default false \n"
+      " \t-s - optional pipe name \n"
       " \t-d - sets the debug mode, 1 - debug on, 0 - debug off (default)\n"
       "\n";
       exit(1);
@@ -73,6 +86,7 @@ namespace ndn {
       if (DEBUG)
         std::cout << "set file name to " << m_fileName << std::endl;
     }
+
     void
     listen()
     {
@@ -98,7 +112,9 @@ namespace ndn {
         //   Log();
         //   exit;
         // }
-
+        // char *msg;
+        // msg="m3:100:300|";
+        // write(m_fd, msg, strlen(msg));
         m_face.processEvents(time::milliseconds(m_blockTime));
       }
     }
@@ -107,6 +123,10 @@ namespace ndn {
       if (m_notificationHandler != nullptr) {
         std::cout << "Trying to initialize notification handler, but it already exists";
         return;
+      }
+      if(PUBLISHER)
+      {
+        initPublisherData();
       }
       //std::shared_ptr<ndn::Face> facePtr(&m_notificationFace, NullDeleter<Face>());
       // register signal SIGINT and signal handler
@@ -120,6 +140,22 @@ namespace ndn {
       m_notificationHandler->init(m_fileName,
               std::bind(&NotificationProducer::onNotificationUpdateWithTime, this, _1, _2));
         //m_notificationHandler->registerNotificationPrefix(m_name);
+
+      if(!m_pipeName.empty())
+      {
+        /* create the FIFO (named pipe) */
+        mkfifo(m_pipeName.c_str(), 0666);
+
+        /* write message to the FIFO */
+        m_fd = open(m_pipeName.c_str(), O_WRONLY | O_NONBLOCK);
+
+        // char *msg;
+        // msg="m1:20:30|";
+        // write(m_fd, msg, strlen(msg));
+        // msg="m0:50:90|";
+        // write(m_fd, msg, strlen(msg));
+
+      }
       sleep(2);
     }
     static void signalHandler( int signum )
@@ -128,16 +164,14 @@ namespace ndn {
       exit(signum);
     }
 
-    Name
-    getRandomEvent()
+    Name getRandomEvent()
     {
       Name event("/test/event/");
       event.appendNumber(m_eventNameDist(m_randomGenerator));
 
       return event;
     }
-    Name
-    getNextEvent()
+    Name getNextEvent()
     {
       Name event("/test/event/");
       event.append(m_id);
@@ -145,6 +179,48 @@ namespace ndn {
       ++m_next;
       return event;
     }
+    Name getNextStep()
+    {
+      // event format is: "name/x/y";
+      Name event(m_id);
+      event.appendNumber(m_next_x);
+      event.appendNumber(m_next_y);
+      m_next_x += m_step_size_x;
+      m_next_y += m_step_size_y;
+      return event;
+    }
+    void
+    initPublisherData()
+    {
+      std::cout << "init publisher" << std::endl;
+      std::ifstream fs("publisherData.txt");
+      std::string line;
+      std::string idToFind(m_id);
+
+      while(std::getline(fs, line))
+      {
+        std::vector<std::string> publisherData;
+        boost::split(publisherData, line, [](char c){return c == ',';});
+        // line found
+        if ( publisherData[0] == idToFind)
+        {
+          m_next_x = std::stoi(publisherData[1]);
+          m_next_y = std::stoi(publisherData[2]);
+          m_step_size_x = std::stoi(publisherData[3]);
+          m_step_size_y = std::stoi(publisherData[4]);
+
+          if (DEBUG)
+          {
+           std::cout << "found line: " << line << std::endl;
+           std::cout << "x: " << publisherData[1] << std::endl;
+           std::cout << "y: " << publisherData[2] << std::endl;
+           std::cout << "x step Size: " << publisherData[3] << std::endl;
+           std::cout << "y step Size: " << publisherData[4] << std::endl;
+          }
+        }
+      }
+    }
+
     void onNotificationUpdateWithTime (uint64_t receivedTime, const std::unordered_map<uint64_t,std::vector<Name>>& notificationList)
     {
       //std::cout << "received!!" << std::endl;
@@ -161,6 +237,26 @@ namespace ndn {
           for (size_t i = 0; i < iList.second.size(); i++)
           {
             m_receivedStream << ", " << iList.second[i];
+            // std::string data = iList.second[i][0].toUri();
+            // data.append(":");
+            // data.append();
+            // data.append(":");
+            // data.append(iList.second[i][2].toNumber());
+            // data.append("|");
+
+            // data format should be="name:100:300|";
+            std::stringstream data;
+            // first add name
+            data << iList.second[i][0].toUri();
+            data <<":";
+            data << iList.second[i][1].toNumber();
+            data <<":";
+            data << iList.second[i][2].toNumber();
+            data <<"|";
+            // char *msg;
+
+            write(m_fd, data.str().c_str(), data.str().size());
+
           }
           m_receivedStream << std::endl;
         }
@@ -168,6 +264,10 @@ namespace ndn {
     }
     void Log()
     {
+      // close(m_fd);
+      // /* remove the FIFO */
+      // unlink(m_pipeName.c_str());
+
       std::ofstream output(m_logFile.c_str());
       output << "Total sent: " << m_allSentEvents.size() << std::endl;
       output << "Total received: " << m_allRecievedEvents.size() << std::endl;
@@ -207,6 +307,7 @@ namespace ndn {
         output << iSize.first << ", " << iSize.second << std::endl;
       }
       output.close();
+
       sleep (2);
     }
     void setTotalEventsNum(int num)
@@ -225,6 +326,10 @@ namespace ndn {
     {
       m_logFile = fileName;
     }
+    void setPipeName(std::string pipeName)
+    {
+      m_pipeName = pipeName;
+    }
     void setId(std::string id)
     {
       m_id = id;
@@ -238,7 +343,8 @@ namespace ndn {
         std::vector<Name> eventList;
 
         //event = getRandomEvent();
-        event = getNextEvent();
+        //event = getNextEvent();
+        event = getNextStep();
         eventList.push_back(event);
         m_allSentEvents.push_back(event);
         m_eventsCounter++;
@@ -256,7 +362,7 @@ namespace ndn {
         {
           // schedule the next sending
           m_sentEventId =
-            m_scheduler.scheduleEvent(ndn::time::seconds(m_eventRate),
+            m_scheduler.scheduleEvent(ndn::time::milliseconds(m_eventRate),
                                       bind(&NotificationProducer::sendEvent,this));
         }
 
@@ -275,6 +381,7 @@ namespace ndn {
     std::string m_programName;
     //Name m_name;
     std::string m_fileName;
+    std::string m_pipeName;
     std::shared_ptr<notificationLib::api> m_notificationHandler;
     Face m_face;
     //Face& m_notificationFace;
@@ -296,7 +403,12 @@ namespace ndn {
     //std::ostringstream m_receivedStream;
     std::stringstream m_receivedStream;
     int m_next;
+    int m_next_x;
+    int m_next_y;
+    int m_step_size_x;
+    int m_step_size_y;
     std::string m_id;
+    int m_fd;
 
   };
 } // namespace ndn
@@ -312,7 +424,7 @@ main(int argc, char* argv[])
   bool LogSet = false;
   bool idSet = false;
 
-  while ((option = getopt(argc, argv, "hf:n:l:i:r:b:pd:")) != -1)
+  while ((option = getopt(argc, argv, "hf:n:l:i:r:b:s:pd:")) != -1)
   {
     switch (option)
     {
@@ -347,6 +459,9 @@ main(int argc, char* argv[])
         break;
       case 'p':
         PUBLISHER = 1;
+        break;
+      case 's':
+        producer.setPipeName(optarg);
         break;
       default:
         producer.usage();
