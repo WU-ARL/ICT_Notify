@@ -180,8 +180,7 @@ class Simulation(tk.Frame):
                                     random.random() * 4 + 2,
                                     self.grid_size,
                                     node_color = "royal blue") )
-        print (self.num_rows)/2
-        print (self.num_cols)/2
+
         stationary_targets = [ node.center for node in self.nodes ]
         mobile_nodes_ids = [ "h9x1" , "h2x1", "h8x1", "h12x2" ]
         # add mobile nodes

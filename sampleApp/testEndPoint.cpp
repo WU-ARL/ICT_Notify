@@ -244,13 +244,8 @@ namespace ndn {
           m_receivedStream << receivedTime - iList.first << ", ";
           for (size_t i = 0; i < iList.second.size(); i++)
           {
-            m_receivedStream << ", " << iList.second[i];
-            // std::string data = iList.second[i][0].toUri();
-            // data.append(":");
-            // data.append();
-            // data.append(":");
-            // data.append(iList.second[i][2].toNumber());
-            // data.append("|");
+            // old log format
+            //m_receivedStream << ", " << iList.second[i];
 
             // data format should be="name:100:300|";
             std::stringstream data;
@@ -264,6 +259,7 @@ namespace ndn {
             // char *msg;
 
             write(m_fd, data.str().c_str(), data.str().size());
+            m_receivedStream << ", " << data.str();
 
           }
           m_receivedStream << std::endl;
