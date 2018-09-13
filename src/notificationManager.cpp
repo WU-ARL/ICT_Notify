@@ -30,7 +30,7 @@ NotificationProtocol::NotificationProtocol(ndn::Face& face,
   , m_notificationReplyFreshness(notificationReplyFreshness)
   , m_randomGenerator(std::random_device{}())
   //, m_reexpressionJitter(m_randomGenerator, boost::uniform_int<>(100,500))
-  , m_reexpressionJitter(100,500)
+  , m_reexpressionJitter(5,20)
   , m_signingId(defaultSigningId)
   , m_validator(validator)
 {
@@ -292,7 +292,7 @@ NotificationProtocol::sendDiff(const Name& interestName,  const ndn::time::milli
     }
     bool sent = false;
     // if remote is not empty and has unexpired info - trigger interest now to get it.
-    _LOG_DEBUG("NotificationProtocol::sendDiff: list size in remote is:" << inLocal.size());
+    _LOG_DEBUG("NotificationProtocol::sendDiff: list size in remote is:" << inRemote.size());
     for(auto const& rit: inRemote)
     {
       if (sent)
