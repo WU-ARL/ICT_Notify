@@ -187,8 +187,8 @@ class Simulation(tk.Frame):
         for i in range(self.num_mobile):
             self.nodes.append( Node(self.canvas,
                                     mobile_nodes_ids[i], #+ str(i),
-                                    3,
-                                    5,
+                                    -1,
+                                    -1,
                                     # random.random() * self.num_rows,
                                     # random.random() * self.num_cols,
                                     random.random() * 3 + 0.5,
