@@ -6,9 +6,9 @@ notification
 	lifetime 1
 	isListener true
 	isProvider true
-	isList true
+	stateType LIST
 	event
 	{
-		
+
 	}
 }

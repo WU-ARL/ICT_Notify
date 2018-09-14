@@ -17,10 +17,19 @@
 
 namespace notificationLib {
 
+namespace StateType
+{
+  enum
+  {
+    IBF = 1,
+    LIST = 2,
+    TUPLE = 3
+  };
+}
 class State : noncopyable
 {
 public:
-  State(size_t maxNotificationMemory, bool isList);
+  State(size_t maxNotificationMemory, int listType);
 
   void addTimestamp(uint64_t timestamp, const std::vector<Name>& eventList);
   uint64_t update(const std::vector<Name>& eventList);
@@ -65,7 +74,8 @@ private:
   size_t m_maxNotificationMemory;
   // history containers
   IBFT m_ibft;
-  bool m_isList;
+  //bool m_isList;
+  int m_stateType;
   std::unordered_map<uint64_t,shared_ptr<Data>> m_DataList;
   std::unordered_map<uint64_t,std::vector<Name>> m_NotificationHistory;
 };

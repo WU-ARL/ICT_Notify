@@ -12,7 +12,7 @@ Notification::Notification(const Name& name,
                           time::milliseconds lifetime,
                           bool isListener,
                           bool isProvider,
-                          bool isList,
+                          int stateType,
                           ndn::Face& face,
                           NotificationAPICallback notificationCB)
   : m_notificationName(name)
@@ -24,7 +24,7 @@ Notification::Notification(const Name& name,
                            maxNotificationMemory,
                            memoryFreshness,
                            lifetime,
-                           isList,
+                           stateType,
                            notificationCB,
                            api::DEFAULT_NAME,
                            api::DEFAULT_VALIDATOR,
@@ -101,14 +101,21 @@ Notification::create(const ConfigSection& configSection,
   if (!isListener && !isProvider)
     BOOST_THROW_EXCEPTION(Error("isListener and isProvider are both false, expecting at least one to be true"));
 
-  // Get notification.isProvider
-  bool isList = false;
-  if (propertyIt == configSection.end() || !boost::iequals(propertyIt->first, "isList")) {
-    BOOST_THROW_EXCEPTION(Error("Expecting <notification.isList>"));
+  // Get notification.stateType
+  int stateType = StateType::LIST;
+  if (propertyIt == configSection.end() || !boost::iequals(propertyIt->first, "stateType")) {
+    BOOST_THROW_EXCEPTION(Error("Expecting <notification.stateType>"));
   }
 
-  if(propertyIt->second.data() == "true")
-    isList = true;
+  if(propertyIt->second.data() == "IBF")
+    stateType = StateType::IBF;
+  else if(propertyIt->second.data() == "TUPLE")
+    stateType = StateType::TUPLE;
+  else if(propertyIt->second.data() == "LIST")
+    stateType = StateType::LIST;
+  else
+    BOOST_THROW_EXCEPTION(Error("Expecting IBF, LIST or TUPLE for <notification.stateType>"));
+
   propertyIt++;
 
   auto notification = make_unique<Notification>(name,
@@ -117,7 +124,7 @@ Notification::create(const ConfigSection& configSection,
                                                 time::milliseconds(lifetime),
                                                 isListener,
                                                 isProvider,
-                                                isList,
+                                                stateType,
                                                 face,
                                                 notificationCB);
 

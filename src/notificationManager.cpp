@@ -12,14 +12,14 @@ NotificationProtocol::NotificationProtocol(ndn::Face& face,
                                            size_t maxNotificationMemory,
                                            const time::milliseconds& notificationMemoryFreshness,
                                            const time::milliseconds& notificationInterestLifetime,
-                                           bool isList,
+                                           int listType,
                                            const NotificationAPICallback& onUpdate,
                                            const Name& defaultSigningId,
                                            std::shared_ptr<Validator> validator,
                                            const time::milliseconds& notificationReplyFreshness)
   : m_face(face)
   , m_notificationName(notificationName)
-  , m_state(maxNotificationMemory, isList)
+  , m_state(maxNotificationMemory, listType)
   , m_notificationMemoryFreshness(notificationMemoryFreshness)
   , m_onUpdate(onUpdate)
   , m_interestTable(m_face.getIoService())

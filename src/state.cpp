@@ -8,9 +8,9 @@ INIT_LOGGER(state);
 
 namespace notificationLib {
 
-State::State(size_t maxNotificationMemory, bool isList)
+State::State(size_t maxNotificationMemory, int stateType)
   : m_maxNotificationMemory(maxNotificationMemory)
-  , m_isList(isList)
+  , m_stateType(stateType)
   , m_ibft(maxNotificationMemory, 4) // 4 bytes hash value size in ibf
                                      // key size (timestamp) is 8 bytes
 {
@@ -66,7 +66,11 @@ State::isExpired(const uint64_t now, uint64_t timestamp, ndn::time::milliseconds
 ConstBufferPtr
 State::getState() const
 {
-  if(m_isList)
+  if(m_stateType == StateType::TUPLE )
+  {
+
+  }
+  else if(m_stateType == StateType::LIST)
   {
     size_t estimatedSize = 0;
     EncodingEstimator estimator;
@@ -96,7 +100,7 @@ State::getState() const
                                                                       listBlock.size());
     return contentBuffer;
   }
-  else
+  else if (m_stateType == StateType::IBF)
   {
     Block ibfBlock = m_ibft.wireEncode();
 
@@ -114,7 +118,11 @@ bool State::getDiff(ConstBufferPtr rmtStateStr,
   auto remoteBuf = bzip2::decompress(rmtStateStr->get<char>(),
                                      rmtStateStr->size());
 
-  if(m_isList)
+  if(m_stateType == StateType::TUPLE)
+  {
+
+  }
+  if(m_stateType == StateType::LIST)
   {
     Block bufferBlock = Block(remoteBuf);
     std::vector<uint8_t> emptyVec;
@@ -156,7 +164,7 @@ bool State::getDiff(ConstBufferPtr rmtStateStr,
     }
     return true;
   }
-  else
+  else if (m_stateType == StateType::IBF)
   {
     IBFT remoteIBF(remoteBuf, m_maxNotificationMemory, 4);
 

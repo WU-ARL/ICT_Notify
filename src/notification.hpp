@@ -21,7 +21,7 @@ public:
                const time::milliseconds lifetime,
                bool isListener,
                bool isProvider,
-               bool isList,
+               int stateType,
                ndn::Face& face,
                NotificationAPICallback notificationCB);
 

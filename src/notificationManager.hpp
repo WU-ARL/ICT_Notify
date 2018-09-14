@@ -41,7 +41,7 @@ namespace notificationLib
                          size_t maxNotificationMemory,
                          const time::milliseconds& notificationMemoryFreshness,
                          const time::milliseconds& eventInterestLifetime,
-                         bool isList,
+                         int listType,
                          //const Name& notificationPrefix,
                          const NotificationAPICallback& onUpdate,
                          const Name& defaultSigningId,
