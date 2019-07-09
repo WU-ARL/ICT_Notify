@@ -110,11 +110,11 @@ namespace notificationLib
     //                      std::set<std::pair<uint64_t,std::vector<uint8_t> > >& list,
     //                      const ndn::time::milliseconds& freshness);
 
-    void
-    CreateNotificationData(const Name& dataName,
-                           const uint64_t timestampKey,
-                           const std::vector<Name>& notificationList,
-                           const ndn::time::milliseconds& freshness);
+    // void
+    // CreateNotificationData(const Name& dataName,
+    //                        const uint64_t timestampKey,
+    //                        const std::vector<Name>& notificationList,
+    //                        const ndn::time::milliseconds& freshness);
 
      void
      resetOutstandingInterest();
@@ -140,7 +140,7 @@ namespace notificationLib
     Name m_outstandingInterestName;
     const ndn::PendingInterestId* m_outstandingInterestId;
     NotificationAPICallback m_onUpdate;
-    std::vector<ConstBufferPtr> m_stateHostory;
+    std::vector<ConstBufferPtr> m_stateHistory;
 
     // Timer
     time::milliseconds m_notificationInterestLifetime;

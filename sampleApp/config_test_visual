@@ -6,7 +6,7 @@ notification
 	lifetime 1
 	isListener true
 	isProvider true
-	stateType LIST
+	stateType TUPLE
 	event
 	{
 

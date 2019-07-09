@@ -3,6 +3,7 @@
 #include "murmurhash3.hpp"
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
+#include <random>
 
 INIT_LOGGER(state);
 
@@ -14,27 +15,45 @@ State::State(size_t maxNotificationMemory, int stateType)
   , m_ibft(maxNotificationMemory, 4) // 4 bytes hash value size in ibf
                                      // key size (timestamp) is 8 bytes
 {
+  if(stateType == StateType::TUPLE)
+  {
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::uniform_real_distribution<double> dist(1000, 10000);
+
+    m_localIndex = dist(mt);
+    _LOG_INFO("State::State(): local random index is " << m_localIndex);
+  }
+  else
+    m_localIndex = 0;
 }
 
 void
-State::addTimestamp(uint64_t timestamp, const std::vector<Name>& eventList)
+State::_addTimestamp(uint64_t timestamp, const std::vector<Name>& eventList, int partyIndex /*= 0*/)
 {
-  _LOG_DEBUG("State::addTimestamp(): index timestamp " << timestamp);
+  _LOG_DEBUG("State::_addTimestamp(): index timestamp " << timestamp);
   m_ibft.insert(timestamp, _pseudoRandomValue(timestamp));
 
   _saveHistory(timestamp, eventList);
+
+  if(m_stateType == StateType::TUPLE && partyIndex != 0 )
+  {
+    // TBD_hila: save history for partyIndex
+  }
+
+
 }
 uint64_t
-State::update(const std::vector<Name>& eventList)
+State::createKey(const std::vector<Name>& eventList)
 {
   // get current timestamp in nanoseconds
   auto now_ns = boost::chrono::time_point_cast<boost::chrono::nanoseconds>(ndn::time::system_clock::now());
   auto now_ns_long_type = (now_ns.time_since_epoch()).count();
 
-  _LOG_DEBUG("State::update(): index timestamp " << now_ns_long_type);
+  _LOG_DEBUG("State::createKey(): index timestamp " << now_ns_long_type);
   m_ibft.insert(now_ns_long_type, _pseudoRandomValue(now_ns_long_type));
 
-  //std::cout << "Table after update" << m_ibft.DumpTable()<< std::endl;
+  //std::cout << "Table after createKey" << m_ibft.DumpTable()<< std::endl;
   _saveHistory(now_ns_long_type, eventList);
   return now_ns_long_type;
 }
@@ -192,7 +211,7 @@ State::reconcile(ConstBufferPtr newState, NotificationData& data, ndn::time::mil
       if(!State::isExpired(now_ns_long_type, newit.first, max_freshness))
       {
         _LOG_DEBUG("State::reconcile: item is fresh  " << newit.first);
-        addTimestamp(newit.first, data.m_eventsObj.getEventList(newit.first));
+        _addTimestamp(newit.first, data.m_eventsObj.getEventList(newit.first));
       }
       else
         _LOG_DEBUG("State::reconcile: item expired  " << newit.first);
@@ -267,6 +286,14 @@ State::_saveHistory(uint64_t timestamp, const std::vector<Name>&eventList)
   _LOG_DEBUG("State::_saveHistory");
 
   m_NotificationHistory[timestamp] = eventList;
+
+  // auto entry = m_NotificationTuple.find(timestamp);
+  // if(entry != m_NotificationHistory.end())
+  //   return entry->second;
+  // else
+  //   return emptyVec;
+  // notificationList_t TimestampsForIndex = m_NotificationTuple[m_localIndex];
+  // TimestampsForIndex
 
 }
 std::string State::dumpHistory() const

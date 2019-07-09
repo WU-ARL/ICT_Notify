@@ -63,7 +63,7 @@ NotificationProtocol::sendNotificationInterest()
   interestName.append(state->get<uint8_t>(), state->size());
   //interestName.appendVersion();
   m_outstandingInterestName = interestName;
-  m_stateHostory.push_back(state);
+  m_stateHistory.push_back(state);
 
   // scheduling the next interest so there is always a
   // long-lived interest packet in the PIT
@@ -219,7 +219,7 @@ NotificationProtocol::satisfyPendingNotificationInterests(const std::vector<Name
      return;
   }
   // first, create new key timestamp for the pushed events
-  uint64_t newTimestampKey = m_state.update(eventList);
+  uint64_t newTimestampKey = m_state.createKey(eventList);
 
   _LOG_INFO("NotificationProtocol::satisfyPendingNotificationInterests: new timestamp key" << newTimestampKey);
 
@@ -456,14 +456,14 @@ NotificationProtocol::resetOutstandingInterest()
   m_scheduledInterestId = eventId;
 }
 
-
+/*
 void
 NotificationProtocol::CreateNotificationData(const Name& dataName,
                                              const uint64_t timestampKey,
                                              const std::vector<Name>& eventList,
                                              const ndn::time::milliseconds& freshness)
 {
-  /*
+
   _LOG_DEBUG("NotificationProtocol::CreateNotificationData");
 
   NotificationData eventListData;
@@ -488,7 +488,7 @@ NotificationProtocol::CreateNotificationData(const Name& dataName,
 
   m_NotificationHistory[timestampKey] = eventList;
   _LOG_DEBUG("NotificationProtocol::CreateNotificationData end");
-  */
-}
 
+}
+*/
 } //namespace notificationLib

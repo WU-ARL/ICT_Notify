@@ -17,6 +17,8 @@
 
 namespace notificationLib {
 
+typedef std::unordered_map<uint64_t,std::vector<Name>> notificationList_t;
+
 namespace StateType
 {
   enum
@@ -31,8 +33,7 @@ class State : noncopyable
 public:
   State(size_t maxNotificationMemory, int listType);
 
-  void addTimestamp(uint64_t timestamp, const std::vector<Name>& eventList);
-  uint64_t update(const std::vector<Name>& eventList);
+  uint64_t createKey(const std::vector<Name>& eventList);
 
   ConstBufferPtr getState() const;
 
@@ -67,6 +68,7 @@ public:
 private:
   std::vector<uint8_t> _pseudoRandomValue(uint64_t n);
 
+  void _addTimestamp(uint64_t timestamp, const std::vector<Name>& eventList, int partyIndex = 0);
   void _saveHistory(uint64_t timestamp, const std::vector<Name>&eventList);
 
   void _removeFromHistory(uint64_t timestamp);
@@ -76,8 +78,11 @@ private:
   IBFT m_ibft;
   //bool m_isList;
   int m_stateType;
-  std::unordered_map<uint64_t,shared_ptr<Data>> m_DataList;
-  std::unordered_map<uint64_t,std::vector<Name>> m_NotificationHistory;
+  int m_localIndex;
+  //std::unordered_map<uint64_t,shared_ptr<Data>> m_DataList;
+  notificationList_t m_NotificationHistory;
+  std::unordered_map<uint64_t,notificationList_t> m_NotificationTuple;
+  //std::vector<std::unordered_map<<uint64_t,std::vector<Name>>> m_NotificationTuple;
 };
 
 // class Gzip {
