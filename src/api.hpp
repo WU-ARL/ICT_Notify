@@ -85,7 +85,7 @@ private:
   ndn::KeyChain m_keyChain;
   std::shared_ptr<Validator> m_validator;
 
-  //std::unordered_unordered_map<ndn::Name, const ndn::RegisteredPrefixId*> m_registeteredEventsList;
+  //std::unordered_unordered_map<ndn::Name, const ndn::RegisteredPrefixId*> m_registeredEventsList;
   //ndn::InMemoryStoragePersistent m_inMemoryStorage;
 };
 

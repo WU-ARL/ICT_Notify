@@ -69,7 +69,7 @@ public:
 public:
   const Interest interest;
   const Name name;
-  ndn::EventId   expirationEvent;
+  ndn::scheduler::EventId   expirationEvent;
 };
 
 using UnsatisfiedInterestPtr = shared_ptr<UnsatisfiedInterest>;

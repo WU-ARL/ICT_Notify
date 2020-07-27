@@ -130,15 +130,17 @@ namespace notificationLib
     // Communication
     ndn::Face& m_face;
     Name m_notificationName;
-    std::unordered_map<ndn::Name, const ndn::RegisteredPrefixId*> m_registeteredNotificationList;
+    std::unordered_map<ndn::Name, ndn::RegisteredPrefixHandle> m_registeredNotificationList;
+    //std::unordered_map<ndn::Name, const ndn::RegisteredPrefixId*> m_registeredNotificationList;
     InterestTable m_interestTable;
-    ndn::Scheduler m_scheduler;
-    ndn::EventId m_scheduledInterestId;
+    ndn::scheduler::Scheduler m_scheduler;
+    ndn::scheduler::EventId m_scheduledInterestId;
 
     // State
     State m_state;
     Name m_outstandingInterestName;
-    const ndn::PendingInterestId* m_outstandingInterestId;
+    ndn::PendingInterestHandle m_outstandingInterestId;
+    //const ndn::PendingInterestId* m_outstandingInterestId;
     NotificationAPICallback m_onUpdate;
     std::vector<ConstBufferPtr> m_stateHistory;
 

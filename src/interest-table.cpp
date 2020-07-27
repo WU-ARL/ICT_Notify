@@ -23,7 +23,8 @@ InterestTable::insert(const Interest& interest, const Name& name)
   if (entryLifetime < time::milliseconds::zero())
     entryLifetime = ndn::DEFAULT_INTEREST_LIFETIME;
 
-  request->expirationEvent = m_scheduler.scheduleEvent(entryLifetime, [=] { erase(name); });
+  request->expirationEvent = m_scheduler.schedule(entryLifetime, [=] { erase(name); });
+  //request->expirationEvent = m_scheduler.scheduleEvent(entryLifetime, [=] { erase(name); });
 
   m_table.insert(request);
 }
@@ -33,7 +34,8 @@ InterestTable::erase(const Name& name)
 {
   auto it = m_table.get<hashed>().find(name);
   while (it != m_table.get<hashed>().end()) {
-    m_scheduler.cancelEvent((*it)->expirationEvent);
+    (*it)->expirationEvent.cancel();
+    //m_scheduler.cancelEvent((*it)->expirationEvent);
     m_table.erase(it);
 
     it = m_table.get<hashed>().find(name);
@@ -61,7 +63,8 @@ void
 InterestTable::clear()
 {
   for (const auto& item : m_table) {
-    m_scheduler.cancelEvent(item->expirationEvent);
+    item->expirationEvent.cancel();
+    //m_scheduler.cancelEvent(item->expirationEvent);
   }
 
   m_table.clear();

@@ -4,6 +4,7 @@
 #include "common.hpp"
 #include <ndn-cxx/encoding/tlv-nfd.hpp>
 #include <ndn-cxx/security/key-chain.hpp>
+#include <iostream>
 
 namespace notificationLib
 {

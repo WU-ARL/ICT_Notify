@@ -23,7 +23,7 @@ NotificationProtocol::NotificationProtocol(ndn::Face& face,
   , m_notificationMemoryFreshness(notificationMemoryFreshness)
   , m_onUpdate(onUpdate)
   , m_interestTable(m_face.getIoService())
-  , m_outstandingInterestId(0)
+    //, m_outstandingInterestId(0)
   , m_scheduler(m_face.getIoService())
   //, m_randomGenerator(static_cast<unsigned int>(std::time(0)))
   , m_notificationInterestLifetime(notificationInterestLifetime)
@@ -40,9 +40,10 @@ NotificationProtocol::NotificationProtocol(ndn::Face& face,
 NotificationProtocol::~NotificationProtocol()
 {
   // clear local FIB entries towards producer
-  for(const auto& itr : m_registeteredNotificationList) {
-    if (static_cast<bool>(itr.second))
-      m_face.unsetInterestFilter(itr.second);
+  for(auto& itr : m_registeredNotificationList) {
+    //if (static_cast<bool>(itr.second))
+    itr.second.unregister();
+    //m_face.unsetInterestFilter(itr.second);
   }
   m_face.shutdown();
   m_scheduler.cancelAllEvents();
@@ -67,20 +68,26 @@ NotificationProtocol::sendNotificationInterest()
 
   // scheduling the next interest so there is always a
   // long-lived interest packet in the PIT
-  ndn::EventId eventId =
-    m_scheduler.scheduleEvent(m_notificationInterestLifetime / 2 +
+  ndn::scheduler::EventId eventId =
+    //m_scheduler.scheduleEvent(m_notificationInterestLifetime / 2 +
+    m_scheduler.schedule(m_notificationInterestLifetime / 2 +
                               ndn::time::milliseconds(m_reexpressionJitter(m_randomGenerator)),
                               bind(&NotificationProtocol::sendNotificationInterest,
                                     this));
 
-  m_scheduler.cancelEvent(m_scheduledInterestId);
+  m_scheduledInterestId.cancel();
+  //m_scheduler.cancelEvent(m_scheduledInterestId);
   m_scheduledInterestId = eventId;
 
   Interest interest(interestName);
   api::collectNameSize(1,interestName.toUri().size());
   interest.setMustBeFresh(true);
   interest.setInterestLifetime(m_notificationInterestLifetime);
-
+  //JP add when moving to v6.6
+  interest.setCanBePrefix(true);
+  interest.setDefaultCanBePrefix(true);
+  //end JP add
+  
   m_outstandingInterestId = m_face.expressInterest(interest,
                                    bind(&NotificationProtocol::onNotificationData, this, _1, _2),
                                    bind(&NotificationProtocol::onNotificationInterestNack, this, _1), // Nack
@@ -167,7 +174,7 @@ NotificationProtocol::registerNotificationFilter(const Name& notificationNameFil
   _LOG_DEBUG("NotificationProtocol::registerNotificationFilter");
 
   // add notification name filter to registered notification list
-  m_registeteredNotificationList[notificationNameFilter] =
+  m_registeredNotificationList[notificationNameFilter] =
           m_face.setInterestFilter(ndn::InterestFilter(notificationNameFilter).allowLoopback(false),
                                    bind(&NotificationProtocol::onNotificationInterest,
                                         this, _1, _2),
@@ -448,11 +455,13 @@ NotificationProtocol::resetOutstandingInterest()
   time::milliseconds after(m_reexpressionJitter(m_randomGenerator));
 
   _LOG_DEBUG("Reschedule notification interest after " << after);
-  ndn::EventId eventId = m_scheduler.scheduleEvent(after,
+  //ndn::EventId eventId = m_scheduler.scheduleEvent(after,
+  ndn::scheduler::EventId eventId = m_scheduler.schedule(after,
                                               bind(&NotificationProtocol::sendNotificationInterest,
                                                    this));
 
-  m_scheduler.cancelEvent(m_scheduledInterestId);
+  m_scheduledInterestId.cancel();
+  //m_scheduler.cancelEvent(m_scheduledInterestId);
   m_scheduledInterestId = eventId;
 }
 

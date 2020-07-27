@@ -38,7 +38,7 @@ api::api(ndn::Face& face,
 
 api::~api()
 {
-  /*for(const auto& itr : m_registeteredEventsList) {
+  /*for(const auto& itr : m_registeredEventsList) {
     if (static_cast<bool>(itr.second))
       m_face.unsetInterestFilter(itr.second);
   }*/
@@ -142,7 +142,7 @@ api::loadConfigurationFile(std::istream& input, const std::string& filename)
 
   /* Moved to logicManager
   // add event and interest filter to registered events list
-  m_registeteredEventsList[eventPrefix] = m_face.setInterestFilter(eventPrefix,
+  m_registeredEventsList[eventPrefix] = m_face.setInterestFilter(eventPrefix,
                            bind(&api::onInterest, this, _1, _2),
                            [] (const Name& prefix, const std::string& msg) {});
    */
