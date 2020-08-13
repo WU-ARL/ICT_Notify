@@ -36,7 +36,7 @@ When the notification name is concatenated with the event name, we end up with t
 
 In order to tell ICT-Notify important parameters like the notification name and event names our application is going to filter on, we need to pass it a configuration file. This configuration file also must specify what data structure ICT-Notify should use to represent multiple events. For the purposes of this tutorial, we default to the invertible bloom filter. Lastly, the configuration file can contain certain parameters like the default interest lifetime, if the application is a producer or consumer (or both simultaneously), etc. We provide the full configuration file for the tutorial below, with the most important settings highlighted in bold.
 
-```json
+```yaml
 notification
 {
         name /wustl/test/service
@@ -78,10 +78,11 @@ void init()
         return;
     }
 
-    m_notificationHandler = std::make_shared<notificationLib::api>(m_face,                                                                                           notificationLib::api::DEFAULT_NAME,
-                                notificationLib::api::DEFAULT_VALIDATOR);
+	m_notificationHandler = std::make_shared<notificationLib::api>(m_face,
+	                                                               notificationLib::api::DEFAULT_NAME,
+	                                                               notificationLib::api::DEFAULT_VALIDATOR);
     m_notificationHandler->init(m_fileName,
-        std::bind(&NotificationConsumer::onNotificationUpdateWithTime, this, _1, _2));
+	                            std::bind(&NotificationConsumer::onNotificationUpdateWithTime, this, _1, _2));
       
     sleep(2);
 }
