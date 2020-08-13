@@ -83,7 +83,8 @@ def build(bld):
         VERSION      = VERSION,
         )
     if bld.env['WITH_EXAMPLES']:
-      bld.recurse("sampleApp")
+        bld.recurse("sampleApp")
+        bld.recurse("tutorial")
 
 def version(ctx):
     if getattr(Context.g_module, 'VERSION_BASE', None):

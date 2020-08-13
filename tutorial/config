@@ -1,0 +1,19 @@
+notification
+{
+	name /wustl/test/service
+	maxMemorySize 50
+	memoryFreshness 7
+	lifetime 1
+	isListener true
+	isProvider true
+	stateType IBF
+	event
+	{
+		filter
+		{
+			type name
+			name /test/event/
+			relation is-prefix-of
+		}
+	}
+}
